@@ -67,7 +67,7 @@ function sam2sv(samfile) {
 /**
  * print SV information
  **/
-function printSVInfo(LR, type, pos, len, code, rname2, code) {
+function printSVInfo(LR, type, pos, len, rname, rname2, code) {
   var sortkey = [pad(code, 2), pad(pos, 10), pad(len, 9), LR, type].join("");
   console.log([LR, type, pos, len, rname, rname2, sortkey].join("\t"));
 }

@@ -3,6 +3,7 @@ var fs  = require('fs');
 var dna = require('dna');
 var FASTAReader = require('fastareader');
 var FASTAName = require("./fastaname");
+var termcolor = require("termcolor").define;
 
 var FASTA_LINELEN = 50;
 
@@ -122,17 +123,21 @@ function main() {
 
   // get fasta
   .forEach( (function() {
-    // return function(v) { console.log(v); }
+    
 
     var fastas = new FASTAReader(fastafile, json);
     return function(v) {
-      try {
-        var bases = fastas.fetch(v.rname, v.start, v.end - v.start + 1);
-      }
-      catch (e) {
-        //console.error(e);
-        return false;
-      }
+      var bases = dna.getChromList(v.rname, function(rname) {
+        try {
+          return fastas.fetch(rname, v.start, v.end - v.start + 1);
+        }
+        catch (e) {
+          return false;
+        }
+      });
+
+      if (!bases) return;
+
       var fastaName = FASTAName.stringify(v);
       console.log(">" + fastaName);
 

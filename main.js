@@ -36,7 +36,12 @@ var $j = new Junjo({
  * get raw breakpoints
  **/
 $j('rawbreaks', function() {
-  return spawn("node", [__dirname + "/rawbreaks.js", filenames.SAM]);
+  var rawbreaks = spawn("node", [__dirname + "/rawbreaks.js", filenames.SAM]);
+
+  // show stderr
+  rawbreaks.stderr.pipe(process.stderr);
+
+  return rawbreaks;
 });
 
 
@@ -47,6 +52,15 @@ $j('sort', function(rawbreaks) {
 
   var sort = spawn("sort", ["-k10,10"]);
   rawbreaks.stdout.pipe(sort.stdin);
+
+  // show stderr
+  sort.stderr.pipe(process.stderr);
+
+  sort.stdout.once("data", function() {
+    console.egreen("sort is running.");
+  });
+
+
   return sort;
 })
 .after("rawbreaks");
@@ -68,6 +82,17 @@ $j('bpbed', function(sort) {
   sort.stdout.pipe(bpbed.stdin);
   var wstream = fs.createWriteStream(filenames.BREAKPOINT_BED);
   bpbed.stdout.pipe(wstream);
+
+  bpbed.stdout.once("data", function() {
+    console.egreen("cluster_breaks (bed) is running.");
+  });
+
+
+  // show stderr
+  bpbed.stderr.pipe(process.stderr);
+
+
+
   wstream.on("close", this.cb);
 })
 .after("sort");
@@ -89,6 +114,15 @@ $j('bpfastq', function(sort) {
   sort.stdout.pipe(bpfastq.stdin);
   var fastqStream = fs.createWriteStream(filenames.BREAKPOINT_FASTQ);
   bpfastq.stdout.pipe(fastqStream);
+
+  bpfastq.stdout.once("data", function() {
+    console.egreen("cluster_breaks (fastq) is running.");
+  });
+
+  // show stderr
+  bpfastq.stderr.pipe(process.stderr);
+
+
   fastqStream.on("close", this.cb);
 })
 .after("sort");
@@ -98,6 +132,7 @@ $j('bpfastq', function(sort) {
  * get FASTAs around breakpoints
  **/
 $j("bpfastagen", function() {
+  console.egreen("bpfastagen.js is running");
 
   var bpfastagen = spawn("node", [__dirname + "/bpfastagen.js",
     filenames.BREAKPOINT_BED,
@@ -108,9 +143,22 @@ $j("bpfastagen", function() {
 
   var wstream = fs.createWriteStream(filenames.BREAKPOINT_FASTA);
   bpfastagen.stdout.pipe(wstream);
+
+  // show stderr
+  bpfastagen.stderr.pipe(process.stderr);
+
+  wstream.on("close", function(){
+    console.eyellow("bpfastagen finished.");
+  });
+
   wstream.on("close", this.cb);
 })
 .after("bpbed");
+
+$j(function() {
+  console.ecyan("AFTER BPFAT");
+})
+.after("bpfastagen");
 
 
 /**
