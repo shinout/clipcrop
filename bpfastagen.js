@@ -2,6 +2,7 @@ var AP  = require('argparser');
 var fs  = require('fs');
 var dna = require('dna');
 var FASTAReader = require('fastareader');
+var FASTAName = require("./fastaname");
 
 var FASTA_LINELEN = 50;
 
@@ -54,7 +55,7 @@ function main() {
 
   // execute
 
-  var lines = fs.readFileSync(bp, 'utf-8')
+  fs.readFileSync(bp, 'utf-8')
   .split('\n')
 
   // filter comment and empty lines
@@ -68,7 +69,7 @@ function main() {
     return {
       LR    : bpinfo[3],
       pos   : Number(bpinfo[1]),
-      rname : (bpinfo[0].slice(0, 3) != 'chr') ? ('chr' + bpinfo[0]) : bpinfo[0]
+      rname : bpinfo[0]
     };
   })
 
@@ -132,8 +133,8 @@ function main() {
         //console.error(e);
         return false;
       }
-      var fastaID = v.rname + '_' + v.start + '_to_' + v.end;
-      console.log(">" + fastaID);
+      var fastaName = FASTAName.stringify(v);
+      console.log(">" + fastaName);
 
       while (bases) {
         console.log(bases.slice(0, FASTA_LINELEN));

@@ -1,6 +1,7 @@
 var termcolor = require("termcolor").define();
 var LineStream = require("linestream");
 var dna = require("dna");
+var BPInfo = require("./bpinfo");
 
 /**
  *
@@ -183,18 +184,13 @@ function printFASTQ(cl, minsize, minlen) {
   if (num < minsize) return;
 
   cl.forEach(function(bp) {
+    bp.size = num;
     var slen = bp.seq.length;
     if (slen < minlen) return;
 
-    var id = [
-      bp.name + "__",
-      bp.LR + bp.pos,
-      bp.cigar,
-      bp.rname,
-      bp.strand + bp.seq.length
-    ].join(":");
+    var id = BPInfo.stringify(bp);
 
-    this.write([id, bp.seq, "+", bp.qual].join("\n") + "\n");
+    this.write(['@' + id, bp.seq, "+", bp.qual].join("\n") + "\n");
   }, this);
 }
 

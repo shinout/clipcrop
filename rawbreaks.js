@@ -137,4 +137,13 @@ function isWritableStream(val) {
 }
 
 
-callRawBreaks(__dirname + "/sample.sam", {format: "sam"});
+if (process.argv[1] == __filename) {
+  var filename = process.argv[2];
+  if (!filename) {
+    console.error("require sam file");
+    process.exit();
+  }
+  format = filename.slice(filename.lastIndexOf(".") + 1);
+
+  callRawBreaks(filename, {format: format});
+}
