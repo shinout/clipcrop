@@ -42,12 +42,20 @@ if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)
   }
 
 
-  clipcrop({
+  var config = {
     SAM              : samfile,
     REFERENCE_FASTA  : fastafile,
     REFERENCE_JSON   : jsonfile,
-    OUTPUT_DIR       : p.getOptions("dir")
+    OUTPUT_DIR       : p.getOptions("dir") || process.cwd()
+  };
+
+  ["max_diff", "min_cluster_size", "min_quality"].forEach(function(name) {
+    var val = p.getOptions(name);
+    console.log(val);
+    if (val !== false && val !== undefined) config[name.toUpperCase()] = val;
   });
+
+  clipcrop(config);
 }
 
 
@@ -63,12 +71,6 @@ function clipcrop(config, callback) {
 
 
   var defaultConfig = {
-    /**
-     * input files
-     **/
-    REFERENCE_JSON   : null,
-    OUTPUT_DIR       : process.cwd(),
-
     /**
      * parameters
      **/
@@ -105,7 +107,8 @@ function clipcrop(config, callback) {
 
   var $j = new Junjo({
     destroy: true,
-    noTimeout: true
+    noTimeout: true,
+    silent: true
   });
 
   /**
@@ -117,7 +120,12 @@ function clipcrop(config, callback) {
    *
    **/
   $j('check', function() {
-    // not implemented yet.
+    var ret = ["REFERENCE_FASTA","SAM"].every(function(name) {
+      return fs.statSync(config[name]).isFile();
+    });
+    if (!ret || (config.REFERENCE_JSON && !fs.statSync(config.REFERENCE_JSON).isFile())) {
+      throw new Error("file not found.");
+    }
   });
 
 
