@@ -1,7 +1,7 @@
 {
   "author": "SHIN Suzuki <shinout310@gmail.com>",
   "name": "clipcrop",
-  "description": "SV detector with clipping information",
+  "description": "a tool for detecting structural variations using soft-clipping information",
   "version": "0.0.1",
   "main": "./clipcrop.js",
   "engines": {
