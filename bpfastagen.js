@@ -22,23 +22,23 @@ function main() {
   var bp = p.getArgs(0);
   if (!bp) {
     showUsage();
-    process.exit();
+    return;
   }
 
   if (! require('path').existsSync(bp)) {
     console.error(bp + ': No such file.');
-    process.exit();
+    return;
   }
 
   var fastafile = p.getArgs(1);
   if (!fastafile) {
     showUsage();
-    process.exit();
+    return;
   }
 
   if (! require('path').existsSync(fastafile)) {
     console.error(fastafile+ ': No such file.');
-    process.exit();
+    return;
   }
 
   var jsonfile = p.getOptions('j', 'json');
