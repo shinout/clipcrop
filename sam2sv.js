@@ -2,6 +2,7 @@ var SR = require('samreader');
 var fs = require("fs");
 var BPInfo = require("./bpinfo");
 var FASTAName = require("./fastaname");
+// require("termcolor").define;
 
 /**
  * sam2sv
@@ -12,17 +13,12 @@ function sam2sv(samfile) {
 
   sam.on('alignment', function(aln) {
     /**
-     * get breakpoint information from FASTQ
+     * get the original breakpoint which generated this clipped sequence
      **/
     var bp = BPInfo.parse(aln.name);
 
     var rev      = aln.flags.reversed;
     var unmapped = aln.flags.unmapped;
-
-    /**
-    var bp_10 = Math.floor((bp.size + 5)/10);
-    breakpoints[LR][bp_10] = bp.size;
-    **/
 
     /**
      * if unmapped, assumes INSERTION
@@ -47,10 +43,20 @@ function sam2sv(samfile) {
       return;
     }
 
+    /**
+     * get the position of another breakpoint
+     *
+     * if original LR equals L, and not reversed,
+     * or original LR equals R, and reversed,
+     * then 
+     **/
     var prebp = Number( (bp.LR == 'L' ^ rev)? (Number(aln.pos) + aln.cigar.len()) : aln.pos) + f.start -1;
+
+
     var pos   = (prebp >= bp.pos) ? bp.pos : prebp;
 
     var isDup = (bp.LR == 'L' ^ bp.pos > prebp);
+
 
     /**
      * if rev: INV

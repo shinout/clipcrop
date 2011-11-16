@@ -111,8 +111,8 @@ function main(input, config) {
     /**
      * checking if prev and current are in different clusters
      **/
-    if (!prev || prev.code != current.code
-        || Math.abs(prev.pos - current.pos) > MAX_DIFF) {
+    if (prev && ( prev.code != current.code
+        || Math.abs(prev.pos - current.pos) > MAX_DIFF)) {
 
       print(result.cluster[LR],
             MIN_CLUSTER_SIZE, // allowable minimum cluster size
