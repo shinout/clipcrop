@@ -75,12 +75,17 @@ function clipcrop(config, callback) {
     /**
      * parameters
      **/
-    MAX_DIFF           : 2,
-    MIN_CLUSTER_SIZE   : 10,
-    MIN_QUALITY        : 5,
-    MIN_SEQ_LENGTH     : 10,
-    BASES_AROUND_BREAK : 1000,
-    BWA_THREADS        : 8
+    MAX_DIFF            : 2,
+    MIN_CLUSTER_SIZE    : 10,
+    MIN_QUALITY         : 5,
+    MIN_SEQ_LENGTH      : 10,
+
+    BASES_AROUND_BREAK  : 1000,
+
+    SV_MAX_DIFF         : 3,
+    SV_MIN_CLUSTER_SIZE : 10,
+
+    BWA_THREADS         : 8
   };
 
   config.__proto__ = defaultConfig;
@@ -382,7 +387,11 @@ function clipcrop(config, callback) {
    * evaluate called SVs
    **/
   $j("cluster_svinfo", function(sort) {
-    var clusterSV = spawn("node", [dirs.SUBROUTINES + "cluster_svinfo.js"]);
+    var clusterSV = spawn("node", [dirs.SUBROUTINES + "cluster_svinfo.js",
+      config.OUTPUT_DIR, // SAVE_DIR
+      config.SV_MAX_DIFF,
+      config.SV_MIN_CLUSTER_SIZE
+    ]);
 
     sort.stdout.pipe(clusterSV.stdin);
 
@@ -494,6 +503,11 @@ fs.readdirSync(dirs.SUBROUTINES).forEach(function(file) {
 fs.readdirSync(dirs.FORMATS).forEach(function(file) {
   clipcrop[file.slice(0, -3)] = require(dirs.FORMATS + file);
 });
+
+/**
+ * exporting SVClassifyStream
+ **/
+clipcrop.SVClassifyStream = require(dirs.SV_CLASSIFY + 'SVClassifyStream');
 
 module.exports = clipcrop;
 

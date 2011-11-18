@@ -2,8 +2,8 @@ var dirs = require('../config').dirs;
 var termcolor = require("termcolor").define();
 var LineStream = require("linestream");
 var dna = require("dna");
-var BPInfo = require(dirs.FORMATS + "./bpinfo");
-var svbedline = require(dirs.FORMATS + 'svbedline');
+var BPInfo = require(dirs.FORMATS + "bpinfo");
+var SVClassifyStream = require(dirs.SV_CLASSIFY + 'SVClassifyStream');
 
 
 /**
@@ -16,6 +16,9 @@ var svbedline = require(dirs.FORMATS + 'svbedline');
 function cluster_svinfo(input, config) {
   var MAX_DIFF = config.MAX_DIFF || 3;
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 10;
+  var SAVE_DIR = config.SAVE_DIR || (__dirname + '../');
+
+  var svcStream = new SVClassifyStream(SAVE_DIR, {prefix: ''});
 
   var lines = new LineStream(input, {
     fieldNum: 7,
@@ -66,7 +69,7 @@ function cluster_svinfo(input, config) {
 
     if (prev && ( Math.abs(prev.pos - current.pos) > MAX_DIFF)) {
 
-      printSVInfo(clusters[key],
+      printSVInfo(svcStream, clusters[key],
             MIN_CLUSTER_SIZE // allowable minimum cluster size
       );
       clusters[key] = [];  // reset
@@ -76,13 +79,23 @@ function cluster_svinfo(input, config) {
     prevs[key] = current;
   });
 
+  lines.on("end", function() {
+    svcStream.end();
+  });
+
+  svcStream.on("close", function() {
+    // finished!
+  });
 }
 
 
 /**
- * shows sv info as BED format.
+ * register sv info and write it as BED format.
+ * @param svcStream: instance of SVClassifyStream
+ * @param cl : cluster (array)
+ * @param minsize: allowable minimum size of cluster
  **/
-function printSVInfo(cl, minsize) {
+function printSVInfo(svcStream, cl, minsize) {
   var num = cl.length;
   if (num < minsize) return;
 
@@ -103,7 +116,7 @@ function printSVInfo(cl, minsize) {
 
   var score = getReliabilityScore(Ls,Rs,size);
 
-  var svline = svbedline({
+  svcStream.write({
     rname  : rname,
     start  : pos,
     end    : pos + len,
@@ -116,10 +129,6 @@ function printSVInfo(cl, minsize) {
       LR : [Ls,Rs].join('/')
     }
   });
-  console.log(svline);
-
-
-  //console.log([rname, pos, pos+len, type, Ls, Rs, len_disp, score, num].join("\t"));
 }
 
 /**
@@ -148,11 +157,9 @@ if (__filename == process.argv[1]) {
   process.stdin.resume();
 
   cluster_svinfo(process.stdin, {
-    type: process.argv[2],
+    SAVE_DIR: process.argv[2],
     MAX_DIFF: process.argv[3],
-    MIN_CLUSTER_SIZE: process.argv[4],
-    MIN_QUALITY     : process.argv[5],
-    MIN_SEQ_LENGTH  : process.argv[6]
+    MIN_CLUSTER_SIZE: process.argv[4]
   });
 }
 
