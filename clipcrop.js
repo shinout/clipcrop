@@ -9,9 +9,16 @@ var AP = require("argparser");
 var path = require("path");
 
 
+function showUsage() {
+  console.error ('[usage]');
+  console.egreen('\tclipcrop <sam file> <fasta file> [<fasta information json file>]');
+  console.error ('[options]');
+  console.error ('\t' + '--dir\tdirectory to put result files. default = basename(path)');
+}
+
+
 /**
  * if called from command (not required by other js files)
- *
  **/
 if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)(\.js)?$')[1]) { 
 
@@ -22,13 +29,6 @@ if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)
     'dir',
   ])
   .parse();
-
-  function showUsage() {
-    console.error ('[usage]');
-    console.egreen('\tclipcrop <sam file> <fasta file> [<fasta information json file>]');
-    console.error ('[options]');
-    console.error ('\t' + '--dir\tdirectory to put result files. default = basename(path)');
-  }
 
   var samfile = p.getArgs(0);
   var fastafile = p.getArgs(1);
@@ -61,7 +61,6 @@ if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)
  * execute clipcrop
  *
  * @param config
- * @param filenames
  * @param callback
  **/
 function clipcrop(config, callback) {
