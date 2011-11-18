@@ -125,7 +125,8 @@ function clipcrop(config, callback) {
       throw new Error("file not found.");
     }
 
-    exec('which bwa', this.cb);
+    exec('which bwa', this.callbacks());
+    // exec('which sort', this.callbacks());
   })
   .post(function(e, out, err) {
     if (e || err) {
@@ -172,7 +173,7 @@ function clipcrop(config, callback) {
   /**
    * sort raw breakpoints
    **/
-  $j('sort', function(rawbreaks) {
+  $j('sort_bp', function(rawbreaks) {
 
     var sort = spawn("sort", ["-k10,10"]);
     rawbreaks.stdout.pipe(sort.stdin);
@@ -181,7 +182,7 @@ function clipcrop(config, callback) {
     to_stderr(sort.stderr);
 
     sort.stdout.once("data", function() {
-      console.egreen("sort is running.");
+      console.egreen("sort_bp is running.");
     });
 
 
@@ -219,7 +220,7 @@ function clipcrop(config, callback) {
 
     wstream.on("close", this.cb);
   })
-  .after("sort");
+  .after("sort_bp");
 
 
   /**
@@ -249,7 +250,7 @@ function clipcrop(config, callback) {
 
     fastqStream.on("close", this.cb);
   })
-  .after("sort");
+  .after("sort_bp");
 
 
   /**
@@ -348,12 +349,39 @@ function clipcrop(config, callback) {
 
 
   /**
+   * sort called SVs
+   **/
+  $j('sort_sv', function(sam2sv) {
+    /**
+     * column number to sort
+     **/
+    var n = 8;
+
+    var sort = spawn("sort", ["-k" + n + "," + n]);
+    sam2sv.stdout.pipe(sort.stdin);
+
+    // show stderr
+    to_stderr(sort.stderr);
+
+    sort.stdout.once("data", function() {
+      console.egreen("sort_sv is running.");
+    });
+
+
+    return sort;
+  })
+  .after("sam2sv");
+
+
+
+
+  /**
    * evaluate called SVs
    **/
-  $j("cluster_svinfo", function(sam2sv) {
+  $j("cluster_svinfo", function(sort) {
     var clusterSV = spawn("node", [__dirname + "/cluster_svinfo.js"]);
 
-    sam2sv.stdout.pipe(clusterSV.stdin);
+    sort.stdout.pipe(clusterSV.stdin);
 
     // show stderr
     to_stderr(clusterSV.stderr);
@@ -362,13 +390,42 @@ function clipcrop(config, callback) {
       console.egreen("cluster_svinfo is running.");
     });
 
-    var wstream = fs.createWriteStream(filenames.SV_BED);
+    return clusterSV;
 
-    clusterSV.stdout.pipe(wstream);
-    wstream.on("close", this.cb);
   })
   .eshift()
-  .after("sam2sv");
+  .after("sort_sv");
+
+
+  /**
+   * sort clustered SVs by reliability
+   **/
+  $j('sort_sv_cluster', function(clusterSV) {
+    /**
+     * column number to sort
+     **/
+    var n = 8;
+
+    var sort = spawn("sort", ["-nrk" + n + "," + n]); // numsort, descend
+    clusterSV.stdout.pipe(sort.stdin);
+
+    // show stderr
+    to_stderr(sort.stderr);
+
+    sort.stdout.once("data", function() {
+      console.egreen("sort_sv_cluster is running.");
+    });
+
+    var wstream = fs.createWriteStream(filenames.SV_BED);
+
+    sort.stdout.pipe(wstream);
+    wstream.on("close", this.cb);
+
+  })
+  .after("cluster_svinfo");
+
+
+
 
   /**
    * on end

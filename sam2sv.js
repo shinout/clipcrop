@@ -24,7 +24,7 @@ function sam2sv(samfile) {
      * if unmapped, assumes INSERTION
      **/
     if (unmapped) {
-      printSVInfo(bp.LR, 'INS', bp.pos, '*', bp.rname, '=', bp.code);
+      printSVInfo(bp.LR, 'INS', bp.pos, '*', bp.rname, '=', bp.size, bp.code);
       return;
     }
 
@@ -39,7 +39,7 @@ function sam2sv(samfile) {
      **/
     if (f.code != bp.code) {
       // this flagment belongs to rname (not bp.rname)
-      printSVInfo(bp.LR, 'ITX', bp.pos, f.start, f.rname, bp.rname, bp.code);
+      printSVInfo(bp.LR, 'ITX', bp.pos, f.start, f.rname, bp.rname, bp.size, bp.code);
       return;
     }
 
@@ -66,16 +66,16 @@ function sam2sv(samfile) {
      **/
     var type = (rev)? 'INV' : (isDup)? 'DUP' : 'DEL';
 
-    printSVInfo(bp.LR, type, pos, Math.abs(prebp - bp.pos), f.rname, '=', bp.code);
+    printSVInfo(bp.LR, type, pos, Math.abs(prebp - bp.pos), f.rname, '=', bp.size, bp.code);
   });
 }
 
 /**
  * print SV information
  **/
-function printSVInfo(LR, type, pos, len, rname, rname2, code) {
+function printSVInfo(LR, type, pos, len, rname, rname2, size, code) {
   var sortkey = [pad(code, 2), pad(pos, 10), pad(len, 9), LR, type].join("");
-  console.log([LR, type, pos, len, rname, rname2, sortkey].join("\t"));
+  console.log([LR, type, pos, len, rname, rname2, size, sortkey].join("\t"));
 }
 
 

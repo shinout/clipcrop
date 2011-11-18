@@ -7,7 +7,7 @@ var BPInfo = require("./bpinfo");
 /**
  * shows clustered SV (Structural Variation) info
  *
- * @param (string or ReadableStream) input
+ * @param (string or ReadableStream) input (requires sorted data)
  * @param (object) config
  *
  **/
@@ -16,7 +16,7 @@ function clusterSVInfo(input, config) {
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 10;
 
   var lines = new LineStream(input, {
-    fieldNum: 6,
+    fieldNum: 7,
     fieldSep: "\t",
     comment: "#"
   });
@@ -46,7 +46,8 @@ function clusterSVInfo(input, config) {
       pos    : Number(data[2]),
       len    : data[3],
       rname  : data[4],
-      rname2 : data[5]
+      rname2 : data[5],
+      size   : data[6],
     };
     
     var key = current.type;
@@ -95,15 +96,30 @@ function printSVInfo(cl, minsize) {
   var pos = getMean(cl, "pos");
   var len = (type == "INS") ? 1: getMean(cl, "len");
   var len_disp = (type == "INS") ? "*": len;
+  var size = getMean(cl, "bpsize");
 
-  console.log([rname, pos, pos+len, type, Ls, Rs, len_disp, num].join("\t"));
+  var score = getReliabilityScore(Ls,Rs,size);
+
+  console.log([rname, pos, pos+len, type, Ls, Rs, len_disp, score, num].join("\t"));
 }
 
+/**
+ * get an average value
+ **/
 function getMean(cl, name) {
   var sum = cl.reduce(function(ret, v) {
     return ret + Number(v[name]);
   }, 0);
   return Math.floor(sum/cl.length + 0.5);
+}
+
+/**
+ * get reliablity score
+ **/
+function getReliabilityScore(Ls, Rs, size) {
+  with (Math) {
+    return floor(Ls + Rs - sqrt(pow(Ls, 2) + pow(Rs, 2)) + 0.5);
+  }
 }
 
 
