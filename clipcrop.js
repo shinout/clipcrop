@@ -9,7 +9,6 @@ var AP = require("argparser");
 var path = require("path");
 
 
-
 /**
  * if called from command (not required by other js files)
  *
@@ -51,7 +50,6 @@ if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)
 
   ["max_diff", "min_cluster_size", "min_quality"].forEach(function(name) {
     var val = p.getOptions(name);
-    console.log(val);
     if (val !== false && val !== undefined) config[name.toUpperCase()] = val;
   });
 
@@ -126,6 +124,13 @@ function clipcrop(config, callback) {
     if (!ret || (config.REFERENCE_JSON && !fs.statSync(config.REFERENCE_JSON).isFile())) {
       throw new Error("file not found.");
     }
+
+    exec('which bwa', this.cb);
+  })
+  .post(function(e, out, err) {
+    if (e || err) {
+      throw new Error("bwa is required.");
+    }
   });
 
 
@@ -157,7 +162,7 @@ function clipcrop(config, callback) {
     var rawbreaks = spawn("node", [__dirname + "/rawbreaks.js", filenames.SAM]);
 
     // show stderr
-    rawbreaks.stderr.pipe(process.stderr);
+    to_stderr(rawbreaks.stderr);
 
     return rawbreaks;
   })
@@ -173,7 +178,7 @@ function clipcrop(config, callback) {
     rawbreaks.stdout.pipe(sort.stdin);
 
     // show stderr
-    sort.stderr.pipe(process.stderr);
+    to_stderr(sort.stderr);
 
     sort.stdout.once("data", function() {
       console.egreen("sort is running.");
@@ -208,7 +213,7 @@ function clipcrop(config, callback) {
 
 
     // show stderr
-    bpbed.stderr.pipe(process.stderr);
+    to_stderr(bpbed.stderr);
 
 
 
@@ -239,7 +244,7 @@ function clipcrop(config, callback) {
     });
 
     // show stderr
-    bpfastq.stderr.pipe(process.stderr);
+    to_stderr(bpfastq.stderr);
 
 
     fastqStream.on("close", this.cb);
@@ -252,6 +257,7 @@ function clipcrop(config, callback) {
    **/
   $j("bpfastagen", function() {
     console.egreen("bpfastagen.js is running");
+    return;
 
     var bpfastagen = spawn("node", [__dirname + "/bpfastagen.js",
       filenames.BREAKPOINT_BED,
@@ -264,21 +270,11 @@ function clipcrop(config, callback) {
     bpfastagen.stdout.pipe(wstream);
 
     // show stderr
-    bpfastagen.stderr.pipe(process.stderr);
-
-    wstream.on("close", function(){
-      console.eyellow("bpfastagen finished.");
-    });
+    to_stderr(bpfastagen.stderr);
 
     wstream.on("close", this.cb);
   })
   .after("bpbed");
-
-  $j(function() {
-    console.ecyan("AFTER BPFAT");
-  })
-  .after("bpfastagen");
-
 
   /**
    * bwa index
@@ -335,18 +331,17 @@ function clipcrop(config, callback) {
    * call SVs
    **/
   $j("sam2sv", function() {
-    var sam2sv = spawn("sam2sv", [filenames.MAPPED_SAM]);
+    var sam2sv = spawn("node", [__dirname + "/sam2sv.js", filenames.MAPPED_SAM]);
+
 
     // show stderr
-    sam2sv.stderr.pipe(process.stderr);
+    to_stderr(sam2sv.stderr);
 
     sam2sv.stdout.once("data", function() {
       console.egreen("sam2sv is running.");
     });
 
     return sam2sv;
-
-    exec(cmd, this.cb);
   })
   .eshift()
   .after("bwa_samse");
@@ -356,12 +351,12 @@ function clipcrop(config, callback) {
    * evaluate called SVs
    **/
   $j("cluster_svinfo", function(sam2sv) {
-    var clusterSV = spawn("cluster_svinfo");
+    var clusterSV = spawn("node", [__dirname + "/cluster_svinfo.js"]);
 
     sam2sv.stdout.pipe(clusterSV.stdin);
 
     // show stderr
-    clusterSV.stderr.pipe(process.stderr);
+    to_stderr(clusterSV.stderr);
 
     clusterSV.stdout.once("data", function() {
       console.egreen("cluster_svinfo is running.");
@@ -399,5 +394,14 @@ function clipcrop(config, callback) {
    **/
   $j.run();
 }
+
+function to_stderr(rStream) {
+  rStream.setEncoding('utf8');
+  rStream.on('data', function(d) {
+    var str = d.trim();
+    if (str) console.ered(str);
+  });
+}
+
 
 module.exports = clipcrop;
