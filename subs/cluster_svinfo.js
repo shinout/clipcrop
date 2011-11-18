@@ -1,7 +1,9 @@
+var dirs = require('../config').dirs;
 var termcolor = require("termcolor").define();
 var LineStream = require("linestream");
 var dna = require("dna");
-var BPInfo = require("./bpinfo");
+var BPInfo = require(dirs.FORMATS + "./bpinfo");
+var svbedline = require(dirs.FORMATS + 'svbedline');
 
 
 /**
@@ -11,7 +13,7 @@ var BPInfo = require("./bpinfo");
  * @param (object) config
  *
  **/
-function clusterSVInfo(input, config) {
+function cluster_svinfo(input, config) {
   var MAX_DIFF = config.MAX_DIFF || 3;
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 10;
 
@@ -85,6 +87,7 @@ function printSVInfo(cl, minsize) {
   if (num < minsize) return;
 
   var rname  = cl[0].rname;
+  var rname2 = cl[0].rname2; // TODO in TRA, this may be different in the same cluster.
 
   /**
    * the nubmer of Ls, Rs
@@ -100,7 +103,23 @@ function printSVInfo(cl, minsize) {
 
   var score = getReliabilityScore(Ls,Rs,size);
 
-  console.log([rname, pos, pos+len, type, Ls, Rs, len_disp, score, num].join("\t"));
+  var svline = svbedline({
+    rname  : rname,
+    start  : pos,
+    end    : pos + len,
+    type   : type,
+    len    : len_disp,
+    rname2 : rname2,
+    score: score,
+    others: {
+      num: num,
+      LR : [Ls,Rs].join('/')
+    }
+  });
+  console.log(svline);
+
+
+  //console.log([rname, pos, pos+len, type, Ls, Rs, len_disp, score, num].join("\t"));
 }
 
 /**
@@ -128,7 +147,7 @@ function getReliabilityScore(Ls, Rs, size) {
 if (__filename == process.argv[1]) {
   process.stdin.resume();
 
-  clusterSVInfo(process.stdin, {
+  cluster_svinfo(process.stdin, {
     type: process.argv[2],
     MAX_DIFF: process.argv[3],
     MIN_CLUSTER_SIZE: process.argv[4],
@@ -136,3 +155,5 @@ if (__filename == process.argv[1]) {
     MIN_SEQ_LENGTH  : process.argv[6]
   });
 }
+
+module.exports = cluster_svinfo;

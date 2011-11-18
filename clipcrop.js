@@ -7,8 +7,12 @@ var fs = require("fs");
 var cl = require("termcolor").define();
 var AP = require("argparser");
 var path = require("path");
+var dirs = require('./config').dirs;
 
 
+/**
+ * usage
+ **/
 function showUsage() {
   console.error ('[usage]');
   console.egreen('\tclipcrop <sam file> <fasta file> [<fasta information json file>]');
@@ -16,11 +20,10 @@ function showUsage() {
   console.error ('\t' + '--dir\tdirectory to put result files. default = basename(path)');
 }
 
-
 /**
- * if called from command (not required by other js files)
+ * entry function
  **/
-if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)(\.js)?$')[1]) { 
+function main() {
 
   var p = new AP()
   .addOptions([
@@ -55,6 +58,7 @@ if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)
 
   clipcrop(config);
 }
+
 
 
 /**
@@ -159,10 +163,11 @@ function clipcrop(config, callback) {
    * get raw breakpoints
    **/
   $j('rawbreaks', function() {
-    var rawbreaks = spawn("node", [__dirname + "/rawbreaks.js", filenames.SAM]);
+    var rawbreaks = spawn("node", [dirs.SUBROUTINES + "rawbreaks.js", filenames.SAM]);
+    console.egreen("breakpoint caller is running");
 
     // show stderr
-    to_stderr(rawbreaks.stderr);
+    to_stderr(rawbreaks.stderr, this);
 
     return rawbreaks;
   })
@@ -178,7 +183,7 @@ function clipcrop(config, callback) {
     rawbreaks.stdout.pipe(sort.stdin);
 
     // show stderr
-    to_stderr(sort.stderr);
+    to_stderr(sort.stderr, this);
 
     sort.stdout.once("data", function() {
       console.egreen("sort_bp is running.");
@@ -195,7 +200,7 @@ function clipcrop(config, callback) {
    **/
   $j('bpbed', function(sort) {
 
-    var bpbed = spawn("node", [__dirname + "/cluster_breaks.js",
+    var bpbed = spawn("node", [dirs.SUBROUTINES + "cluster_breaks.js",
       "bed", 
       config.MAX_DIFF, 
       config.MIN_CLUSTER_SIZE,
@@ -213,7 +218,7 @@ function clipcrop(config, callback) {
 
 
     // show stderr
-    to_stderr(bpbed.stderr);
+    to_stderr(bpbed.stderr, this);
 
 
 
@@ -227,7 +232,7 @@ function clipcrop(config, callback) {
    **/
   $j('bpfastq', function(sort) {
 
-    var bpfastq = spawn("node", [__dirname + "/cluster_breaks.js",
+    var bpfastq = spawn("node", [dirs.SUBROUTINES + "cluster_breaks.js",
       "fastq", 
       config.MAX_DIFF, 
       config.MIN_CLUSTER_SIZE,
@@ -244,7 +249,7 @@ function clipcrop(config, callback) {
     });
 
     // show stderr
-    to_stderr(bpfastq.stderr);
+    to_stderr(bpfastq.stderr, this);
 
 
     fastqStream.on("close", this.cb);
@@ -258,7 +263,7 @@ function clipcrop(config, callback) {
   $j("bpfastagen", function() {
     console.egreen("bpfastagen.js is running");
 
-    var bpfastagen = spawn("node", [__dirname + "/bpfastagen.js",
+    var bpfastagen = spawn("node", [dirs.SUBROUTINES + "bpfastagen.js",
       filenames.BREAKPOINT_BED,
       filenames.REFERENCE_FASTA,
       "-l", config.BASES_AROUND_BREAK,
@@ -269,7 +274,7 @@ function clipcrop(config, callback) {
     bpfastagen.stdout.pipe(wstream);
 
     // show stderr
-    to_stderr(bpfastagen.stderr);
+    to_stderr(bpfastagen.stderr, this);
 
     wstream.on("close", this.cb);
   })
@@ -330,11 +335,11 @@ function clipcrop(config, callback) {
    * call SVs
    **/
   $j("sam2sv", function() {
-    var sam2sv = spawn("node", [__dirname + "/sam2sv.js", filenames.MAPPED_SAM]);
+    var sam2sv = spawn("node", [dirs.SUBROUTINES + "sam2sv.js", filenames.MAPPED_SAM]);
 
 
     // show stderr
-    to_stderr(sam2sv.stderr);
+    to_stderr(sam2sv.stderr, this);
 
     sam2sv.stdout.once("data", function() {
       console.egreen("sam2sv is running.");
@@ -359,7 +364,7 @@ function clipcrop(config, callback) {
     sam2sv.stdout.pipe(sort.stdin);
 
     // show stderr
-    to_stderr(sort.stderr);
+    to_stderr(sort.stderr, this);
 
     sort.stdout.once("data", function() {
       console.egreen("sort_sv is running.");
@@ -377,12 +382,12 @@ function clipcrop(config, callback) {
    * evaluate called SVs
    **/
   $j("cluster_svinfo", function(sort) {
-    var clusterSV = spawn("node", [__dirname + "/cluster_svinfo.js"]);
+    var clusterSV = spawn("node", [dirs.SUBROUTINES + "cluster_svinfo.js"]);
 
     sort.stdout.pipe(clusterSV.stdin);
 
     // show stderr
-    to_stderr(clusterSV.stderr);
+    to_stderr(clusterSV.stderr, this);
 
     clusterSV.stdout.once("data", function() {
       console.egreen("cluster_svinfo is running.");
@@ -400,15 +405,15 @@ function clipcrop(config, callback) {
    **/
   $j('sort_sv_cluster', function(clusterSV) {
     /**
-     * column number to sort
+     * sort by reliablity score
      **/
-    var n = 8;
+    var n = 6;
 
     var sort = spawn("sort", ["-nrk" + n + "," + n]); // numsort, descend
     clusterSV.stdout.pipe(sort.stdin);
 
     // show stderr
-    to_stderr(sort.stderr);
+    to_stderr(sort.stderr, this);
 
     sort.stdout.once("data", function() {
       console.egreen("sort_sv_cluster is running.");
@@ -429,9 +434,11 @@ function clipcrop(config, callback) {
    * on end
    **/
   $j.on("end", function(err) {
-    if (err) {
+    var stderrs = this.$.errlogs;
+
+    if (err || (stderrs && this.$.errlogs.join('').trim())) {
       console.ered("FAILED.");
-      console.ered(err.stack);
+      if (err) console.ered(err.stack);
     }
     else {
       console.egreen("SUCCEEDED!");
@@ -450,13 +457,50 @@ function clipcrop(config, callback) {
   $j.run();
 }
 
-function to_stderr(rStream) {
+
+/**
+ * reports error of child process's stderr streams to process.stderr
+ * 
+ * @param rStream: ReadableStream
+ * @param $jn    : instance of Junjo
+ **/
+function to_stderr(rStream, $jn) {
   rStream.setEncoding('utf8');
   rStream.on('data', function(d) {
     var str = d.trim();
-    if (str) console.ered(str);
+    if (str) {
+      console.ered(str);
+      if (!$jn.$.errlogs) {
+        $jn.$.errlogs = [];
+      }
+      $jn.$.errlogs.push(str);
+    }
   });
 }
 
 
+
+/**
+ * exporting subroutines
+ **/
+fs.readdirSync(dirs.SUBROUTINES).forEach(function(file) {
+  clipcrop[file.slice(0, -3)] = require(dirs.SUBROUTINES + file);
+});
+
+
+/**
+ * exporting format info
+ **/
+fs.readdirSync(dirs.FORMATS).forEach(function(file) {
+  clipcrop[file.slice(0, -3)] = require(dirs.FORMATS + file);
+});
+
 module.exports = clipcrop;
+
+/**
+ * if called from command (not required by other js files)
+ **/
+if (process.argv[1].match('/([^/]+?)(\.js)?$')[1] == __filename.match('/([^/]+?)(\.js)?$')[1]) { 
+  main();
+}
+

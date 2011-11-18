@@ -1,7 +1,8 @@
+var dirs = require('../config').dirs;
 var SR = require('samreader');
 var fs = require("fs");
-var BPInfo = require("./bpinfo");
-var FASTAName = require("./fastaname");
+var BPInfo = require(dirs.FORMATS + "bpinfo");
+var FASTAName = require(dirs.FORMATS + "fastaname");
 // require("termcolor").define;
 
 /**
@@ -97,3 +98,4 @@ if (__filename == process.argv[1]) {
   sam2sv(process.argv[2]);
 }
 
+module.exports = sam2sv;

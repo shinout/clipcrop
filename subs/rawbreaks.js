@@ -14,7 +14,7 @@ var SamAlignment = require("samreader").SamAlignment;
  *
  * @param input  : stream or filename
  **/
-function callRawBreaks(input, options) {
+function rawbreaks(input, options) {
   options || (options = {});
 
   if (!isReadableStream(input)) {
@@ -24,9 +24,7 @@ function callRawBreaks(input, options) {
      **/
     if (options.format == "sam") {
 
-      var parallel = 8;
-
-      console.egreen("start reading SAM file with %s CPUs using master-worker", parallel);
+      var parallel = 8; // TODO changable
 
       var mw = new MasterWorker.processLines({
         parallel: parallel,
@@ -46,7 +44,6 @@ function callRawBreaks(input, options) {
         var total = results.reduce(function(total, v, k) {
           return total + v.total;
         },0);
-        console.egreen("total lines", total);
       });
     }
   }
@@ -145,5 +142,7 @@ if (process.argv[1] == __filename) {
   }
   format = filename.slice(filename.lastIndexOf(".") + 1);
 
-  callRawBreaks(filename, {format: format});
+  rawbreaks(filename, {format: format});
 }
+
+module.exports = rawbreaks;

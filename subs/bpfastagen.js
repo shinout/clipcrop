@@ -1,13 +1,14 @@
+var dirs = require('../config').dirs;
 var AP  = require('argparser');
 var fs  = require('fs');
 var dna = require('dna');
 var FASTAReader = require('fastareader');
-var FASTAName = require("./fastaname");
+var FASTAName = require(dirs.FORMATS + "fastaname");
 var termcolor = require("termcolor").define;
 
 var FASTA_LINELEN = 50;
 
-function main() {
+function bpfastagen() {
 
   function showUsage() {
     console.error("[synopsis]");
@@ -152,5 +153,7 @@ function main() {
 
 
 if (__filename == process.argv[1]) {
-  main();
+  bpfastagen();
 }
+
+module.exports = bpfastagen;

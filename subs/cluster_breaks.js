@@ -1,7 +1,8 @@
+var dirs = require('../config').dirs;
 var termcolor = require("termcolor").define();
 var LineStream = require("linestream");
 var dna = require("dna");
-var BPInfo = require("./bpinfo");
+var BPInfo = require(dirs.FORMATS + "bpinfo");
 
 /**
  *
@@ -31,7 +32,7 @@ var BPInfo = require("./bpinfo");
  *      allowable minimum mean quality of the sequence. default 10.
  *
  **/
-function main(input, config) {
+function cluster_breaks(input, config) {
   var MAX_DIFF         = config.MAX_DIFF         || 3;
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 3;
   var MIN_QUALITY      = config.MIN_QUALITY      || 5;
@@ -218,11 +219,11 @@ function isWritableStream(val) {
 
 
 
-module.exports = main;
+module.exports = cluster_breaks;
 
 if (__filename == process.argv[1]) {
   process.stdin.resume();
-  main(process.stdin, {
+  cluster_breaks(process.stdin, {
     type: process.argv[2],
     MAX_DIFF: process.argv[3],
     MIN_CLUSTER_SIZE: process.argv[4],
