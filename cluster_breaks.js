@@ -30,16 +30,14 @@ var BPInfo = require("./bpinfo");
  *    MIN_SEQ_LENGTH: hoge
  *      allowable minimum mean quality of the sequence. default 10.
  *
- *    output: WritableStream
- *      a stream object to write results. default process.stdout.
- *
  **/
 function main(input, config) {
   var MAX_DIFF         = config.MAX_DIFF         || 3;
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 3;
   var MIN_QUALITY      = config.MIN_QUALITY      || 5;
   var MIN_SEQ_LENGTH   = config.MIN_SEQ_LENGTH   || 10;
-  var output = isWritableStream(config.output) ? config.output : process.stdout;
+  //var output = isWritableStream(config.output) ? config.output : process.stdout;
+  var output = process.stdout;
 
   /**
    * set print function according to type.
@@ -126,9 +124,10 @@ function main(input, config) {
   });
 
   lines.on("end", function() {
-    output.end();
+    // output.end(); // for applying Node >=v0.6.1
   });
 
+  // this never be called... Node >=v0.6.1
   output.on("close", function() {
     if (typeof process.send == "function") {
       process.send("finished");

@@ -258,7 +258,6 @@ function clipcrop(config, callback) {
    **/
   $j("bpfastagen", function() {
     console.egreen("bpfastagen.js is running");
-    return;
 
     var bpfastagen = spawn("node", [__dirname + "/bpfastagen.js",
       filenames.BREAKPOINT_BED,
