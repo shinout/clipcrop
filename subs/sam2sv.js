@@ -46,6 +46,15 @@ function sam2sv(samfile) {
      **/
     var f = FASTAName.parse(aln.rname);
 
+    /**
+     * get the position of another breakpoint
+     *
+     * if original LR equals L, and not reversed,
+     * or original LR equals R, and reversed,
+     * then 
+     **/
+    var prebp = Number( (bp.LR == 'L' ^ rev)? (Number(aln.pos) + aln.cigar.len()) : aln.pos) + f.start -1;
+
 
     /**
      * if rname is different, assumes InterChromosomal Translocation
@@ -59,8 +68,7 @@ function sam2sv(samfile) {
         type   : 'CTX',
         len    : "*",
         rname2 : f.rname,
-        start2 : f.pos,
-        end2   : f.pos + 1,
+        start2 : prebp,
         others : {
           LR    : bp.LR,
           code  : bp.code,
@@ -71,18 +79,14 @@ function sam2sv(samfile) {
       return;
     }
 
+
+    // set the smaller one as SV position
+    var pos = (prebp >= bp.pos) ? bp.pos : prebp;
+
     /**
-     * get the position of another breakpoint
-     *
-     * if original LR equals L, and not reversed,
-     * or original LR equals R, and reversed,
-     * then 
+     * if the position of a left clipped sequence is smaller than the other breakpoint or vice versa,
+     * it's tandem duplication.
      **/
-    var prebp = Number( (bp.LR == 'L' ^ rev)? (Number(aln.pos) + aln.cigar.len()) : aln.pos) + f.start -1;
-
-
-    var pos   = (prebp >= bp.pos) ? bp.pos : prebp;
-
     var isDup = (bp.LR == 'L' ^ bp.pos > prebp);
 
 

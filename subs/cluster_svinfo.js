@@ -32,6 +32,18 @@ function cluster_svinfo(input, config) {
   var clusters = {};
   var prevs = {};
 
+  /**
+   * set current svinfo to clusters
+   **/
+  function setCurrent(current, key) {
+    if (!clusters[key]) {
+      clusters[key] = [];
+    }
+
+    clusters[key].push(current);
+    prevs[key] = current;
+  }
+
   lines.on("data", function(line) {
     /**
      * sv info
@@ -46,23 +58,31 @@ function cluster_svinfo(input, config) {
     var prev = prevs[key];
 
     /**
+     * if there's no previous value, set current value and return
+     **/
+    if (!prev) {
+      setCurrent(current, key);
+      return;
+    }
+
+
+    /**
      * checking if prev and current are in different clusters
      **/
-
-    if (prev && ( Math.abs(prev.start - current.start) > MAX_DIFF)) {
+    if( ( Math.abs(prev.start - current.start) > MAX_DIFF)
+      ||
+      ( current.type != 'INS' && current.type != 'CTX' && Math.abs(prev.end - current.end) > MAX_DIFF)
+      ||
+      ( current.type == 'CTX' && Math.abs(prev.start2 - current.start2) > MAX_DIFF)
+    ) {
 
       printSVInfo(svcStream, clusters[key],
-            MIN_CLUSTER_SIZE // allowable minimum cluster size
+        MIN_CLUSTER_SIZE // allowable minimum cluster size
       );
       clusters[key] = [];  // reset
     }
 
-    if (!clusters[key]) {
-      clusters[key] = [];
-    }
-
-    clusters[key].push(current);
-    prevs[key] = current;
+    setCurrent(current, key);
   });
 
   lines.on("end", function() {
@@ -88,6 +108,7 @@ function printSVInfo(svcStream, cl, minsize) {
   var rname  = cl[0].rname;
   var rname2 = cl[0].rname2;
 
+
   /**
    * the nubmer of Ls, Rs
    **/
@@ -96,7 +117,11 @@ function printSVInfo(svcStream, cl, minsize) {
 
   var type  = cl[0].type;
   var start = getMean(cl, "start");
+  var start2 = getMean(cl, "start2");
   var len = (type == "INS") ? 1: getMean(cl, "len");
+  if (isNaN(len)) {
+    len = 1;
+  }
   var len_disp = (type == "INS") ? "*": len;
   // var size = getMean(cl, "bpsize");
   // var score = getReliabilityScore(Ls,Rs,size);
@@ -110,6 +135,7 @@ function printSVInfo(svcStream, cl, minsize) {
     type   : type,
     len    : len_disp,
     rname2 : rname2,
+    start2 : start2,
     score  : score,
     caller : 'clipcrop',
     others: {
@@ -123,10 +149,19 @@ function printSVInfo(svcStream, cl, minsize) {
  * get an average value
  **/
 function getMean(cl, name) {
-  var sum = cl.reduce(function(ret, v) {
-    return ret + Number(v[name]);
-  }, 0);
-  return Math.floor(sum/cl.length + 0.5);
+  try {
+    var sum = cl.reduce(function(ret, v) {
+      var num = Number(v[name]);
+      if (isNaN(num)) {
+        throw new Error();
+      }
+      return ret + num;
+    }, 0);
+    return Math.floor(sum/cl.length + 0.5);
+  }
+  catch (e) {
+    return '*';
+  }
 }
 
 /**

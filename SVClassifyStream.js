@@ -41,7 +41,7 @@ var required_keys = ['rname', 'start', 'end', 'type'];
 /**
  * bed columns
  **/
-var bed_columns = ['rname', 'start', 'end', 'type', 'len', 'score', 'rname2', 'start2', 'end2', 'caller', 'other'];
+var bed_columns = ['rname', 'start', 'end', 'type', 'len', 'score', 'rname2', 'start2', 'caller', 'other'];
 
 /**
  * default values for optional columns
@@ -51,9 +51,6 @@ var bed_defaults = {
   score  : -1,
   rname2 : '=',
   start2 : '*',
-  end2   : '*',
-  start2 : '*',
-  end2   : '*',
   caller : '*',
   other  : '*'
 };

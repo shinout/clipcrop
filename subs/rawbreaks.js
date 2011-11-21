@@ -8,6 +8,7 @@ var fs = require('fs');
 var termcolor = require("termcolor").define();
 var MasterWorker = require("master-worker");
 var SamAlignment = require("samreader").SamAlignment;
+var AP = require('argparser');
 
 /**
  * print raw breakpoint information bed
@@ -23,8 +24,11 @@ function rawbreaks(input, options) {
      * if sam format, then use master-worker
      **/
     if (options.format == "sam") {
+      if (options.parallel) {
+        options.parallel = Number(options.parallel);
+      }
 
-      var parallel = 8; // TODO changable
+      var parallel = (isNaN(options.parallel) || !options.parallel) ? 8 : options.parallel;
 
       var mw = new MasterWorker.processLines({
         parallel: parallel,
@@ -135,14 +139,19 @@ function isWritableStream(val) {
 
 
 if (process.argv[1] == __filename) {
-  var filename = process.argv[2];
+  var p = new AP().addValueOptions(['parallel']).parse();
+
+  var filename = p.getArgs(0);
   if (!filename) {
     console.error("require sam file");
     process.exit();
   }
   format = filename.slice(filename.lastIndexOf(".") + 1);
 
-  rawbreaks(filename, {format: format});
+  rawbreaks(filename, {
+    format: format,
+    parallel: p.getOptions('parallel')
+  });
 }
 
 module.exports = rawbreaks;

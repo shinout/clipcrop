@@ -9,6 +9,16 @@ var AP = require("argparser");
 var path = require("path");
 var dirs = require('./config').dirs;
 
+var optionNames = {
+  "bp_filter_parallel"  : 'the number of processes to use to filter breakpoints. default: 8',
+  "max_diff"            : 'max difference within breakpoint cluster values. default: 2',
+  "min_cluster_size"    : 'minimum cluster size to be a valid breakpoint. default: 10',
+  "min_quality"         : 'minimum base quality score to allow, default: 5',
+  "bases_around_break"  : 'number of extended bases around breakpoint to be mapped by clipped sequences. default: 1000',
+  'sv_max_diff'         : 'max difference within breakpoint cluster values. default: 10',
+  'sv_min_cluster_size' : 'minimum cluster size to be a valid SV. default: 10',
+  'bwa_threads'         : 'the number of threads bwa uses. default: 8'
+};
 
 /**
  * usage
@@ -18,7 +28,11 @@ function showUsage() {
   console.egreen('\tclipcrop <sam file> <fasta file> [<fasta information json file>]');
   console.error ('[options]');
   console.error ('\t' + '--dir\tdirectory to put result files. default = basename(path)');
+  Object.keys(optionNames).forEach(function(opname) {
+    console.error('\t--' + opname + '\t' + optionNames[opname]);
+  });
 }
+
 
 /**
  * entry function
@@ -31,6 +45,7 @@ function main() {
   .addValueOptions([
     'dir',
   ])
+  .addValueOptions(Object.keys(optionNames))
   .parse();
 
   var samfile = p.getArgs(0);
@@ -45,15 +60,15 @@ function main() {
 
 
   var config = {
-    SAM              : samfile,
-    REFERENCE_FASTA  : fastafile,
-    REFERENCE_JSON   : jsonfile,
-    OUTPUT_DIR       : p.getOptions("dir") || process.cwd()
+    SAM             : samfile,
+    REFERENCE_FASTA : fastafile,
+    REFERENCE_JSON  : jsonfile,
+    OUTPUT_DIR      : p.getOptions("dir") || process.cwd()
   };
 
-  ["max_diff", "min_cluster_size", "min_quality"].forEach(function(name) {
+  Object.keys(optionNames).forEach(function(name) {
     var val = p.getOptions(name);
-    if (val !== false && val !== undefined) config[name.toUpperCase()] = val;
+    if (val !== false && val !== undefined) config[name.toUpperCase()] = Number(val);
   });
 
   clipcrop(config);
@@ -75,6 +90,7 @@ function clipcrop(config, callback) {
     /**
      * parameters
      **/
+    BP_FILTER_PARALLEL  : 8,
     MAX_DIFF            : 2,
     MIN_CLUSTER_SIZE    : 10,
     MIN_QUALITY         : 5,
@@ -82,7 +98,7 @@ function clipcrop(config, callback) {
 
     BASES_AROUND_BREAK  : 1000,
 
-    SV_MAX_DIFF         : 3,
+    SV_MAX_DIFF         : 10,
     SV_MIN_CLUSTER_SIZE : 10,
 
     BWA_THREADS         : 8
@@ -106,8 +122,7 @@ function clipcrop(config, callback) {
     BREAKPOINT_FASTQ : path.normalize(config.OUTPUT_DIR + "/bp.fastq"),
     BREAKPOINT_FASTA : path.normalize(config.OUTPUT_DIR + "/bp.fasta"),
     MAPPED_SAI       : path.normalize(config.OUTPUT_DIR + "/mapped.sai"),
-    MAPPED_SAM       : path.normalize(config.OUTPUT_DIR + "/mapped.sam"),
-    SV_BED           : path.normalize(config.OUTPUT_DIR + "/sv.bed")
+    MAPPED_SAM       : path.normalize(config.OUTPUT_DIR + "/mapped.sam")
   };
 
 
@@ -153,22 +168,24 @@ function clipcrop(config, callback) {
     console.error('# FASTA FILE          : ' + cl.green(config.REFERENCE_FASTA));
     console.error('# JSON FILE           : ' + cl.green(config.REFERENCE_JSON));
     console.error('# OUTPUT DIR          : ' + cl.green(config.OUTPUT_DIR));
+    console.error('# BP FILTER PROCESSES : ' + cl.green(config.BP_FILTER_PARALLEL));
     console.error('# MAX BREAKPOINT DIFF : ' + cl.green(config.MAX_DIFF));
     console.error('# MIN BP CLUSTER SIZE : ' + cl.green(config.MIN_CLUSTER_SIZE));
     console.error('# MIN MEAN BASE QUAL  : ' + cl.green(config.MIN_QUALITY));
     console.error('# MIN SEQ LENGTH      : ' + cl.green(config.MIN_SEQ_LENGTH));
     console.error('# BASES AROUND BREAK  : ' + cl.green(config.BASES_AROUND_BREAK));
+    console.error('# MAX SV DIFF         : ' + cl.green(config.SV_MAX_DIFF));
+    console.error('# MIN SV CLUSTER SIZE : ' + cl.green(config.SV_MIN_CLUSTER_SIZE));
     console.error('# BWA THREADS         : ' + cl.green(config.BWA_THREADS));
     console.error('#############################');
   })
   .after("check");
 
-
   /**
    * get raw breakpoints
    **/
   $j('rawbreaks', function() {
-    var args = [dirs.SUBROUTINES + "rawbreaks.js", filenames.SAM];
+    var args = [dirs.SUBROUTINES + "rawbreaks.js", filenames.SAM, '--parallel', config.BP_FILTER_PARALLEL];
     var rawbreaks = spawn("node", args);
     console.egreen("node", args.join(' '));
 
@@ -398,56 +415,29 @@ function clipcrop(config, callback) {
    * evaluate called SVs
    **/
   $j("cluster_svinfo", function(sort) {
-    var clusterSV = spawn("node", [dirs.SUBROUTINES + "cluster_svinfo.js",
+    var args = [dirs.SUBROUTINES + "cluster_svinfo.js",
       config.OUTPUT_DIR, // SAVE_DIR
       config.SV_MAX_DIFF,
       config.SV_MIN_CLUSTER_SIZE
-    ]);
+    ];
 
-    sort.stdout.pipe(clusterSV.stdin);
+    var clusterSV = spawn("node", args);
+
 
     // show stderr
     to_stderr(clusterSV.stderr, this);
 
-    clusterSV.stdout.once("data", function() {
-      console.egreen("cluster_svinfo is running.");
+    clusterSV.stdin.on("pipe", function() {
+      console.egreen("node", args.join(' '));
     });
 
-    return clusterSV;
+    sort.stdout.pipe(clusterSV.stdin);
+
+    clusterSV.stdout.on('end', this.cb);
 
   })
   .eshift()
   .after("sort_sv");
-
-
-  /**
-   * sort clustered SVs by reliability
-   **/
-  $j('sort_sv_cluster', function(clusterSV) {
-    /**
-     * sort by reliablity score
-     **/
-    var n = 6;
-
-    var sort = spawn("sort", ["-nrk" + n + "," + n]); // numsort, descend
-    clusterSV.stdout.pipe(sort.stdin);
-
-    // show stderr
-    to_stderr(sort.stderr, this);
-
-    sort.stdout.once("data", function() {
-      console.egreen("sort_sv_cluster is running.");
-    });
-
-    var wstream = fs.createWriteStream(filenames.SV_BED);
-
-    sort.stdout.pipe(wstream);
-    wstream.on("close", this.cb);
-
-  })
-  .after("cluster_svinfo");
-
-
 
 
   /**
