@@ -21,7 +21,7 @@ function cluster_svinfo(input, config) {
   var svcStream = new SVClassifyStream(SAVE_DIR, {prefix: ''});
 
   var lines = new LineStream(input, {
-    fieldNum: 7,
+    fieldNum: 2,
     fieldSep: "\t",
     comment: "#"
   });
@@ -32,31 +32,13 @@ function cluster_svinfo(input, config) {
   var clusters = {};
   var prevs = {};
 
-  ["INS", "DEL", "DUP", "ITX", "INV"].forEach(function(type) {
-    var key = type;
-    clusters[key] = [];
-    prevs[key] = null;
-  });
-
-
   lines.on("data", function(line) {
     /**
      * sv info
      **/
-    var data = line.split("\t");
+    var current = JSON.parse(line.split('\t')[1]);
 
-    var current = {
-      LR     : data[0],
-      type   : data[1],
-      pos    : Number(data[2]),
-      len    : data[3],
-      rname  : data[4],
-      rname2 : data[5],
-      size   : data[6],
-    };
-    
-    var key = current.type;
-
+    var key = [current.type, current.rname, current.rname2].join('_');
 
     /**
      * get previous value
@@ -67,12 +49,16 @@ function cluster_svinfo(input, config) {
      * checking if prev and current are in different clusters
      **/
 
-    if (prev && ( Math.abs(prev.pos - current.pos) > MAX_DIFF)) {
+    if (prev && ( Math.abs(prev.start - current.start) > MAX_DIFF)) {
 
       printSVInfo(svcStream, clusters[key],
             MIN_CLUSTER_SIZE // allowable minimum cluster size
       );
       clusters[key] = [];  // reset
+    }
+
+    if (!clusters[key]) {
+      clusters[key] = [];
     }
 
     clusters[key].push(current);
@@ -100,30 +86,32 @@ function printSVInfo(svcStream, cl, minsize) {
   if (num < minsize) return;
 
   var rname  = cl[0].rname;
-  var rname2 = cl[0].rname2; // TODO in TRA, this may be different in the same cluster.
+  var rname2 = cl[0].rname2;
 
   /**
    * the nubmer of Ls, Rs
    **/
-  var Ls     = cl.filter(function(v) { return v.LR == "R" }).length;
-  var Rs     = num - Ls;
+  var Ls    = cl.filter(function(v) { return v.others.LR == "R" }).length;
+  var Rs    = num - Ls;
 
-  var type   = cl[0].type;
-  var pos = getMean(cl, "pos");
+  var type  = cl[0].type;
+  var start = getMean(cl, "start");
   var len = (type == "INS") ? 1: getMean(cl, "len");
   var len_disp = (type == "INS") ? "*": len;
-  var size = getMean(cl, "bpsize");
-
-  var score = getReliabilityScore(Ls,Rs,size);
+  // var size = getMean(cl, "bpsize");
+  // var score = getReliabilityScore(Ls,Rs,size);
+  var score = getReliabilityScore(Ls,Rs);
 
   svcStream.write({
     rname  : rname,
-    start  : pos,
-    end    : pos + len,
+    start  : start,
+    // end    : start + len -1,
+    end    : start + len,
     type   : type,
     len    : len_disp,
     rname2 : rname2,
-    score: score,
+    score  : score,
+    caller : 'clipcrop',
     others: {
       num: num,
       LR : [Ls,Rs].join('/')

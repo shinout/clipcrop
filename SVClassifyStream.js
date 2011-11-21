@@ -41,19 +41,20 @@ var required_keys = ['rname', 'start', 'end', 'type'];
 /**
  * bed columns
  **/
-var bed_columns = ['rname', 'start', 'end', 'type', 'len', 'score', 'rname2', 'start2', 'end2', 'other'];
+var bed_columns = ['rname', 'start', 'end', 'type', 'len', 'score', 'rname2', 'start2', 'end2', 'caller', 'other'];
 
 /**
  * default values for optional columns
  **/
 var bed_defaults = {
   len    : '*',
-  score  : 0,
+  score  : -1,
   rname2 : '=',
   start2 : '*',
   end2   : '*',
   start2 : '*',
   end2   : '*',
+  caller : '*',
   other  : '*'
 };
 
@@ -75,7 +76,9 @@ function SVClassifyStream(dir, options) {
 
   this._list = new SortedList({
     compare: function(sv1, sv2) {
-      return (sv1.score > sv2.score) ? -1: 1; // order by score desc
+      var score1 = Number(sv1.score);
+      var score2 = Number(sv2.score);
+      return (score1 > score2) ? -1: 1; // order by score desc
     }
   });
 
@@ -95,6 +98,9 @@ SVClassifyStream.prototype = new EventEmitter();
  *
  **/
 SVClassifyStream.prototype.write = function(svinfo) {
+  if (!svinfo) {
+    return;
+  }
   var self = this;
   process.nextTick(function() {
     try {
@@ -175,7 +181,7 @@ SVClassifyStream.prototype.end = function() {
        * for each svinfo, write the stringified data to all.bed and {svname}.bed
        **/
       var astream = new ArrayStream(self._list.toArray());
-      
+
       astream.on("data", function(svinfo) {
         var line = '\n' + SVClassifyStream.stringifyInfo(svinfo);
         alltypeStream.write(line);
@@ -200,6 +206,7 @@ SVClassifyStream.prototype.end = function() {
 
 /**
  * stringify sv information
+ * @param (object) svinfo 
  **/
 SVClassifyStream.stringifyInfo = function(svinfo) {
   if (svinfo.others) {

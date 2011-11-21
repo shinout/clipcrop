@@ -168,8 +168,9 @@ function clipcrop(config, callback) {
    * get raw breakpoints
    **/
   $j('rawbreaks', function() {
-    var rawbreaks = spawn("node", [dirs.SUBROUTINES + "rawbreaks.js", filenames.SAM]);
-    console.egreen("breakpoint caller is running");
+    var args = [dirs.SUBROUTINES + "rawbreaks.js", filenames.SAM];
+    var rawbreaks = spawn("node", args);
+    console.egreen("node", args.join(' '));
 
     // show stderr
     to_stderr(rawbreaks.stderr, this);
@@ -183,15 +184,16 @@ function clipcrop(config, callback) {
    * sort raw breakpoints
    **/
   $j('sort_bp', function(rawbreaks) {
+    var args = ["-k10,10"];
 
-    var sort = spawn("sort", ["-k10,10"]);
+    var sort = spawn("sort", args);
     rawbreaks.stdout.pipe(sort.stdin);
 
     // show stderr
     to_stderr(sort.stderr, this);
 
     sort.stdout.once("data", function() {
-      console.egreen("sort_bp is running.");
+      console.egreen("sort", args.join(' '));
     });
 
 
@@ -205,20 +207,22 @@ function clipcrop(config, callback) {
    **/
   $j('bpbed', function(sort) {
 
-    var bpbed = spawn("node", [dirs.SUBROUTINES + "cluster_breaks.js",
+    var args = [dirs.SUBROUTINES + "cluster_breaks.js",
       "bed", 
       config.MAX_DIFF, 
       config.MIN_CLUSTER_SIZE,
       config.MIN_QUALITY,
       config.MIN_SEQ_LENGTH
-    ]);
+    ];
+
+    var bpbed = spawn("node", args);
 
     sort.stdout.pipe(bpbed.stdin);
     var wstream = fs.createWriteStream(filenames.BREAKPOINT_BED);
     bpbed.stdout.pipe(wstream);
 
     bpbed.stdout.once("data", function() {
-      console.egreen("cluster_breaks (bed) is running.");
+      console.egreen("node", args.join(' '));
     });
 
 
@@ -237,20 +241,22 @@ function clipcrop(config, callback) {
    **/
   $j('bpfastq', function(sort) {
 
-    var bpfastq = spawn("node", [dirs.SUBROUTINES + "cluster_breaks.js",
+    var args = [dirs.SUBROUTINES + "cluster_breaks.js",
       "fastq", 
       config.MAX_DIFF, 
       config.MIN_CLUSTER_SIZE,
       config.MIN_QUALITY,
       config.MIN_SEQ_LENGTH
-    ]);
+    ];
+
+    var bpfastq = spawn("node", args);
 
     sort.stdout.pipe(bpfastq.stdin);
     var fastqStream = fs.createWriteStream(filenames.BREAKPOINT_FASTQ);
     bpfastq.stdout.pipe(fastqStream);
 
     bpfastq.stdout.once("data", function() {
-      console.egreen("cluster_breaks (fastq) is running.");
+      console.egreen("node", args.join(' '));
     });
 
     // show stderr
@@ -266,14 +272,17 @@ function clipcrop(config, callback) {
    * get FASTAs around breakpoints
    **/
   $j("bpfastagen", function() {
-    console.egreen("bpfastagen.js is running");
 
-    var bpfastagen = spawn("node", [dirs.SUBROUTINES + "bpfastagen.js",
+    var args = [dirs.SUBROUTINES + "bpfastagen.js",
       filenames.BREAKPOINT_BED,
       filenames.REFERENCE_FASTA,
       "-l", config.BASES_AROUND_BREAK,
       "-j", filenames.REFERENCE_JSON
-    ]);
+    ];
+
+    var bpfastagen = spawn("node", args);
+
+    console.egreen("node", args.join(' '));
 
     var wstream = fs.createWriteStream(filenames.BREAKPOINT_FASTA);
     bpfastagen.stdout.pipe(wstream);
@@ -340,14 +349,15 @@ function clipcrop(config, callback) {
    * call SVs
    **/
   $j("sam2sv", function() {
-    var sam2sv = spawn("node", [dirs.SUBROUTINES + "sam2sv.js", filenames.MAPPED_SAM]);
+    var args = [dirs.SUBROUTINES + "sam2sv.js", filenames.MAPPED_SAM];
+    var sam2sv = spawn("node", args);
 
 
     // show stderr
     to_stderr(sam2sv.stderr, this);
 
     sam2sv.stdout.once("data", function() {
-      console.egreen("sam2sv is running.");
+      console.egreen("node", args.join(' '));
     });
 
     return sam2sv;
@@ -363,16 +373,17 @@ function clipcrop(config, callback) {
     /**
      * column number to sort
      **/
-    var n = 8;
+    var n = 1;
+    var args = ["-k" + n + "," + n];
 
-    var sort = spawn("sort", ["-k" + n + "," + n]);
+    var sort = spawn("sort", args);
     sam2sv.stdout.pipe(sort.stdin);
 
     // show stderr
     to_stderr(sort.stderr, this);
 
     sort.stdout.once("data", function() {
-      console.egreen("sort_sv is running.");
+      console.egreen("sort", args.join(' '));
     });
 
 
