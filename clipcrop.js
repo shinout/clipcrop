@@ -427,12 +427,13 @@ function clipcrop(config, callback) {
     // show stderr
     to_stderr(clusterSV.stderr, this);
 
-    clusterSV.stdin.on("pipe", function() {
+    sort.stdout.on("end", function() {
       console.egreen("node", args.join(' '));
     });
 
     sort.stdout.pipe(clusterSV.stdin);
 
+    clusterSV.stdout.pipe(process.stdout);
     clusterSV.stdout.on('end', this.cb);
 
   })

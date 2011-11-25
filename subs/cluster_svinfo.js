@@ -20,28 +20,27 @@ function cluster_svinfo(input, config) {
 
   var svcStream = new SVClassifyStream(SAVE_DIR, {prefix: ''});
 
+  svcStream.on('sv', function(svinfo, line) {
+    console.log(line);
+  });
+
   var lines = new LineStream(input, {
     fieldNum: 2,
     fieldSep: "\t",
     comment: "#"
   });
 
-  /**
-   * prepare initial values of clusters, prevs
-   **/
   var clusters = {};
-  var prevs = {};
 
   /**
    * set current svinfo to clusters
    **/
   function setCurrent(current, key) {
     if (!clusters[key]) {
-      clusters[key] = [];
+      clusters[key] = new Cluster();
     }
 
     clusters[key].push(current);
-    prevs[key] = current;
   }
 
   lines.on("data", function(line) {
@@ -53,33 +52,33 @@ function cluster_svinfo(input, config) {
     var key = [current.type, current.rname, current.rname2].join('_');
 
     /**
-     * get previous value
+     * get value
      **/
-    var prev = prevs[key];
+    var cluster = clusters[key];
 
     /**
-     * if there's no previous value, set current value and return
+     * if there's no adequate cluster, set current value and return
      **/
-    if (!prev) {
+    if (!cluster) {
       setCurrent(current, key);
       return;
     }
 
 
     /**
-     * checking if prev and current are in different clusters
+     * checking if cluster and current are in different clusters
      **/
-    if( ( Math.abs(prev.start - current.start) > MAX_DIFF)
+    if( ( Math.abs(cluster.get('start') - current.start) > MAX_DIFF)
       ||
-      ( current.type != 'INS' && current.type != 'CTX' && Math.abs(prev.end - current.end) > MAX_DIFF)
+      ( current.type != 'INS' && current.type != 'CTX' && Math.abs(cluster.get('end') - current.end) > MAX_DIFF)
       ||
-      ( current.type == 'CTX' && Math.abs(prev.start2 - current.start2) > MAX_DIFF)
+      ( current.type == 'CTX' && Math.abs(cluster.get('start2') - current.start2) > MAX_DIFF)
     ) {
 
       printSVInfo(svcStream, clusters[key],
         MIN_CLUSTER_SIZE // allowable minimum cluster size
       );
-      clusters[key] = [];  // reset
+      clusters[key] = new Cluster();  // reset
     }
 
     setCurrent(current, key);
@@ -116,14 +115,14 @@ function printSVInfo(svcStream, cl, minsize) {
   var Rs    = num - Ls;
 
   var type  = cl[0].type;
-  var start = getMean(cl, "start");
-  var start2 = getMean(cl, "start2");
-  var len = (type == "INS") ? 1: getMean(cl, "len");
+  var start = cl.get("start");
+  var start2 = cl.get("start2");
+  var len = (type == "INS") ? 1: cl.get("len");
   if (isNaN(len)) {
     len = 1;
   }
   var len_disp = (type == "INS") ? "*": len;
-  // var size = getMean(cl, "bpsize");
+  // var size = cl.get("bpsize");
   // var score = getReliabilityScore(Ls,Rs,size);
   var score = getReliabilityScore(Ls,Rs);
 
@@ -146,23 +145,33 @@ function printSVInfo(svcStream, cl, minsize) {
 }
 
 /**
- * get an average value
+ * Cluster Object
  **/
-function getMean(cl, name) {
+
+function Cluster() {
+}
+
+Cluster.prototype = new Array();
+
+/**
+ * get mean value
+ **/
+Cluster.prototype.get = function(key) {
   try {
-    var sum = cl.reduce(function(ret, v) {
-      var num = Number(v[name]);
+    var total = this.reduce(function(t, v) {
+      var num = Number(v[key]);
       if (isNaN(num)) {
         throw new Error();
       }
-      return ret + num;
+      return t + num;
     }, 0);
-    return Math.floor(sum/cl.length + 0.5);
+    return Math.floor(total / this.length + 0.5);
   }
   catch (e) {
     return '*';
   }
-}
+};
+
 
 /**
  * get reliablity score

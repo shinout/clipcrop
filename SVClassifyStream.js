@@ -181,6 +181,7 @@ SVClassifyStream.prototype.end = function() {
 
       astream.on("data", function(svinfo) {
         var line = '\n' + SVClassifyStream.stringifyInfo(svinfo);
+        self.emit('sv', svinfo, line);
         alltypeStream.write(line);
         wstreams[svinfo.type.toLowerCase()].write(line);
       });
