@@ -159,7 +159,7 @@ SVClassifyStream.prototype.end = function() {
        **/
       var alltypeStream = fs.createWriteStream(prefix + '/all.bed');
       alltypeStream.on('close', onClose);
-      alltypeStream.write(commentLine);
+      alltypeStream.write(commentLine + '\n');
 
 
       /**
@@ -170,7 +170,7 @@ SVClassifyStream.prototype.end = function() {
       svtypes.forEach(function(svtype) {
         wstreams[svtype] = fs.createWriteStream(prefix + '/' + svtype + '.bed');
         wstreams[svtype].on('close', onClose);
-        wstreams[svtype].write(commentLine);
+        wstreams[svtype].write(commentLine + '\n');
       });
 
 
@@ -180,7 +180,7 @@ SVClassifyStream.prototype.end = function() {
       var astream = new ArrayStream(self._list.toArray());
 
       astream.on("data", function(svinfo) {
-        var line = '\n' + SVClassifyStream.stringifyInfo(svinfo);
+        var line = SVClassifyStream.stringifyInfo(svinfo) + '\n';
         self.emit('sv', svinfo, line);
         alltypeStream.write(line);
         wstreams[svinfo.type.toLowerCase()].write(line);
