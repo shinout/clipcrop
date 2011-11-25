@@ -21,7 +21,7 @@ function cluster_svinfo(input, config) {
   var svcStream = new SVClassifyStream(SAVE_DIR, {prefix: ''});
 
   svcStream.on('sv', function(svinfo, line) {
-    console.log(line);
+    console.log(line.trim());
   });
 
   var lines = new LineStream(input, {
