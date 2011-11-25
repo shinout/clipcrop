@@ -416,6 +416,8 @@ function clipcrop(config, callback) {
    **/
   $j("cluster_svinfo", function(sort) {
     var args = [dirs.SUBROUTINES + "cluster_svinfo.js",
+      filenames.REFERENCE_FASTA,
+      filenames.REFERENCE_JSON,
       config.OUTPUT_DIR, // SAVE_DIR
       config.SV_MAX_DIFF,
       config.SV_MIN_CLUSTER_SIZE

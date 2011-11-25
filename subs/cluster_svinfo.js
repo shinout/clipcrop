@@ -4,6 +4,7 @@ var LineStream = require("linestream");
 var dna = require("dna");
 var BPInfo = require(dirs.FORMATS + "bpinfo");
 var SVClassifyStream = require(dirs.SV_CLASSIFY + 'SVClassifyStream');
+var FASTAReader = require('fastareader');
 
 
 /**
@@ -14,9 +15,17 @@ var SVClassifyStream = require(dirs.SV_CLASSIFY + 'SVClassifyStream');
  *
  **/
 function cluster_svinfo(input, config) {
+  var self = this;
+
+
+  var RF_FASTA = config.RF_FASTA;
+  var RF_JSON  = require(config.RF_JSON);
+
   var MAX_DIFF = config.MAX_DIFF || 3;
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 10;
   var SAVE_DIR = config.SAVE_DIR || (__dirname + '../');
+
+  self.freader = new FASTAReader(RF_FASTA, RF_JSON);
 
   var svcStream = new SVClassifyStream(SAVE_DIR, {prefix: ''});
 
@@ -75,7 +84,7 @@ function cluster_svinfo(input, config) {
       ( current.type == 'CTX' && Math.abs(cluster.get('start2') - current.start2) > MAX_DIFF)
     ) {
 
-      printSVInfo(svcStream, clusters[key],
+      printSVInfo.call(self, svcStream, clusters[key],
         MIN_CLUSTER_SIZE // allowable minimum cluster size
       );
       clusters[key] = new Cluster();  // reset
@@ -101,6 +110,8 @@ function cluster_svinfo(input, config) {
  * @param minsize: allowable minimum size of cluster
  **/
 function printSVInfo(svcStream, cl, minsize) {
+  var self = this;
+
   var num = cl.length;
   if (num < minsize) return;
 
@@ -126,7 +137,7 @@ function printSVInfo(svcStream, cl, minsize) {
   // var score = getReliabilityScore(Ls,Rs,size);
   var score = getReliabilityScore(Ls,Rs);
 
-  svcStream.write({
+  var svinfo = {
     rname  : rname,
     start  : start,
     // end    : start + len -1,
@@ -141,7 +152,15 @@ function printSVInfo(svcStream, cl, minsize) {
       num: num,
       LR : [Ls,Rs].join('/')
     }
-  });
+  };
+
+  var SVIsValid = isValidSV.call(self, svinfo);
+  if (SVIsValid) {
+    svcStream.write(svinfo);
+  }
+  else {
+    // console.error('INVALID', svinfo);
+  }
 }
 
 /**
@@ -184,14 +203,45 @@ function getReliabilityScore(Ls, Rs, size) {
 
 
 
+/**
+ * check if SV is valid
+ **/
+function isValidSV(svinfo) {
+  var self = this;
+  var checks = [];
+  
+  if ( ['DUP', 'DEL', 'INV'].indexOf(svinfo.type) >= 0) {
+    checks.push(svinfo.len > 1);
+  }
+
+  /*
+  dna.getChromList(svinfo.rname).some(function(rname) {
+    try {
+      checks.push(!self.freader.hasN(rname, svinfo.start, svinfo.end - svinfo.start));
+      return true;
+    }
+    catch (e) {
+      return false;
+    }
+  });
+  */
+
+  return checks.every(function(v) {return v });
+}
+
+
+
+
 
 if (__filename == process.argv[1]) {
   process.stdin.resume();
 
   cluster_svinfo(process.stdin, {
-    SAVE_DIR: process.argv[2],
-    MAX_DIFF: process.argv[3],
-    MIN_CLUSTER_SIZE: process.argv[4]
+    RF_FASTA: process.argv[2],
+    RF_JSON : process.argv[3],
+    SAVE_DIR: process.argv[4],
+    MAX_DIFF: process.argv[5],
+    MIN_CLUSTER_SIZE: process.argv[6]
   });
 }
 
