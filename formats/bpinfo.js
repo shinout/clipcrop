@@ -12,9 +12,9 @@ var toCode = require("dna").getChromCode;
  **/
 
 var BPInfo = {
-  columns: ["name", "LR", "pos", "cigar", "rname", "strand", "size"],
+  columns: ["name", "LR", "start", "cigar", "rname", "strand", "size"],
   separator: "::",
-  numbers: ["pos", "size"],
+  numbers: ["start", "size"],
 
   /**
    * parse string

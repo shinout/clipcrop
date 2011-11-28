@@ -27,8 +27,8 @@ function sam2sv(samfile) {
     if (unmapped) {
       printSVInfo({
         rname: bp.rname,
-        start: bp.pos,
-        end  : bp.pos+1,
+        start: bp.start,
+        end  : bp.start +1,
         type : 'INS',
         len  : '*',
         rname2 : '=',
@@ -53,7 +53,9 @@ function sam2sv(samfile) {
      * or original LR equals R, and reversed,
      * then 
      **/
-    var prebp = Number( (bp.LR == 'L' ^ rev)? (Number(aln.pos) + aln.cigar.len()) : aln.pos) + f.start -1;
+
+    var start = Number(aln.pos) -1;
+    var theOtherBPStart = f.start + ((bp.LR == 'L' ^ rev)? (start + aln.cigar.len()) : start);
 
 
     /**
@@ -63,12 +65,12 @@ function sam2sv(samfile) {
       // this flagment belongs to rname (not bp.rname)
       printSVInfo({
         rname  : bp.rname,
-        start  : bp.pos,
-        end    : bp.pos + 1,
+        start  : bp.start,
+        end    : bp.start + 1,
         type   : 'CTX',
         len    : "*",
         rname2 : f.rname,
-        start2 : prebp,
+        start2 : theOtherBPStart,
         others : {
           LR    : bp.LR,
           code  : bp.code,
@@ -80,15 +82,23 @@ function sam2sv(samfile) {
     }
 
 
-    // set the smaller one as SV position
-    var pos = (prebp >= bp.pos) ? bp.pos : prebp;
+    // filter if bp.start equals to the other bp.start
+    if (theOtherBPStart == bp.start) {
+      return;
+    }
+
+
+    // set the smaller one as SV start
+    var start = (theOtherBPStart > bp.start) ? bp.start: theOtherBPStart;
+
+    var len = Math.abs(theOtherBPStart - bp.start);
+
 
     /**
-     * if the position of a left clipped sequence is smaller than the other breakpoint or vice versa,
+     * if the start of a left clipped sequence is smaller than the other breakpoint or vice versa,
      * it's tandem duplication.
      **/
-    var isDup = (bp.LR == 'L' ^ bp.pos > prebp);
-
+    var isDup = (bp.LR == 'L' ^ (bp.start > theOtherBPStart));
 
     /**
      * if rev: INV
@@ -98,19 +108,18 @@ function sam2sv(samfile) {
      **/
     var type = (rev)? 'INV' : (isDup)? 'DUP' : 'DEL';
 
-    var len = Math.abs(prebp - bp.pos);
 
     printSVInfo({
       rname  : bp.rname,
-      start  : pos,
-      end    : pos + len - 1,
+      start  : start,       // 0-based coordinate system
+      end    : start + len, // 0-based coordinate system
       type   : type,
       len    : len,
       rname2 : '=',
       others : {
         LR   : bp.LR,
         code : bp.code,
-        size :bp.size
+        size : bp.size
       }
     });
   });

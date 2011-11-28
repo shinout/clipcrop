@@ -9,6 +9,7 @@ var termcolor = require("termcolor").define();
 var MasterWorker = require("master-worker");
 var SamAlignment = require("samreader").SamAlignment;
 var AP = require('argparser');
+var dna = require('dna');
 
 /**
  * print raw breakpoint information bed
@@ -36,6 +37,7 @@ function rawbreaks(input, options) {
         each: callRawBreaksImpl,
         requires: {
           SamAlignment: ["samreader", "SamAlignment"],
+          dna: "dna"
         },
         master: function(i) {
           return {
@@ -97,8 +99,13 @@ function callRawBreaksImpl(line, result, d) {
     }
 
     result.total++;
-    sortkey = rname + "_" + d.pad(bp, 10);
-    console.log([rname, bp, bp+1, type, cigar, seq, qual, strand, name, sortkey].join("\t"));
+    var startend = dna.getStartEnd(bp, 1);
+    var start = startend[0];
+    var end   = startend[1];
+
+
+    sortkey = rname + "_" + d.pad(start, 10);
+    console.log([rname, start, end, type, cigar, seq, qual, strand, name, sortkey].join("\t"));
   });
 }
 

@@ -70,7 +70,7 @@ function bpfastagen() {
     var bpinfo = line.split('\t');
     return {
       LR    : bpinfo[3],
-      pos   : Number(bpinfo[1]),
+      start : Number(bpinfo[1]),
       rname : bpinfo[0]
     };
   })
@@ -80,7 +80,7 @@ function bpfastagen() {
     var v1code = dna.getChromCode(v1.rname);
     var v2code = dna.getChromCode(v2.rname);
     if (v1code == v2code) {
-      return (v1.pos > v2.pos) ? 1 : -1;
+      return (v1.start> v2.start) ? 1 : -1;
     }
     else {
       return (v1code > v2code) ? 1 : -1;
@@ -91,20 +91,17 @@ function bpfastagen() {
   .filter((function() {
     var prev;
     return function(v) {
-      var bool = (!prev || prev != v.pos);
-      prev = v.pos;
+      var bool = (!prev || prev != v.start);
+      prev = v.start;
       return bool;
     }
   })())
 
   // make start, end
   .map(function(v) {
-    v.start = v.pos - len;
-    v.end   = v.pos + len;
+    v.start = Math.max(v.start - len, 0);
+    v.end   = v.start + len;
     return v;
-  })
-  .filter(function(v) {
-    return v.start > 0;
   })
 
   // get ranges
@@ -130,7 +127,8 @@ function bpfastagen() {
     return function(v) {
       var bases = dna.getChromList(v.rname, function(rname) {
         try {
-          return fastas.fetch(rname, v.start, v.end - v.start + 1);
+          var poslen = dna.getPosLen(v.start, v.end);
+          return fastas.fetch(rname, poslen[0], poslen[1]);
         }
         catch (e) {
           return false;
@@ -140,6 +138,7 @@ function bpfastagen() {
       if (!bases) return;
 
       var fastaName = FASTAName.stringify(v);
+
       console.log(">" + fastaName);
 
       while (bases) {

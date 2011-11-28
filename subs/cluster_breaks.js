@@ -88,7 +88,7 @@ function cluster_breaks(input, config) {
     var current = {
       rname  : ar[0],
       code   : dna.getChromCode(ar[0]),
-      pos    : ar[1],
+      start  : ar[1],
       LR     : ar[3],
       cigar  : ar[4],
       seq    : ar[5],
@@ -111,7 +111,7 @@ function cluster_breaks(input, config) {
      * checking if prev and current are in different clusters
      **/
     if (prev && ( prev.code != current.code
-        || Math.abs(prev.pos - current.pos) > MAX_DIFF)) {
+        || Math.abs(prev.start - current.start) > MAX_DIFF)) {
 
       print(result.cluster[LR],
             MIN_CLUSTER_SIZE, // allowable minimum cluster size
@@ -147,30 +147,30 @@ function printBED(cl, minsize) {
 
   var rname  = cl[0].rname;
   var LR     = cl[0].LR;
-  var pos_sum = cl.reduce(function(ret, v) {
-    return ret + Number(v.pos);
+  var start_sum = cl.reduce(function(ret, v) {
+    return ret + Number(v.start);
   }, 0);
 
-  var pos = Math.floor(pos_sum/num + 0.5);
+  var start = Math.floor(start_sum/num + 0.5);
 
   /**
    * calculating seq, but seq may differ in the same cluster,
    * so currently, not implemented.
    *
   var min_key = cl.reduce(function(ret, v, i) {
-    var min = (ret.min) ? Math.min(ret.min, v.pos) : v.pos;
+    var min = (ret.min) ? Math.min(ret.min, v.start) : v.start;
     return {
       min: min,
-      i  : (min == v.pos) ? i : ret.i
+      i  : (min == v.start) ? i : ret.i
     };
   }, {min: null, i: null}).i;
 
-  var delta = pos - cl[min_key].pos;
+  var delta = start - cl[min_key].start;
   if (LR == "L") var seq = cl[min_key].slice();
   else var seq = "";
   */
 
-  this.write([rname, pos, pos+1, LR, num].join("\t") + "\n");
+  this.write([rname, start, start+1, LR, num].join("\t") + "\n");
 }
 
 /**

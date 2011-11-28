@@ -139,9 +139,8 @@ function printSVInfo(svcStream, cl, minsize) {
 
   var svinfo = {
     rname  : rname,
-    start  : start,
-    // end    : start + len -1,
-    end    : start + len,
+    start  : start,        // 0-based coordinate system
+    end    : start + len,  // 0-based coordinate system
     type   : type,
     len    : len_disp,
     rname2 : rname2,
