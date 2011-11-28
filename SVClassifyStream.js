@@ -106,7 +106,7 @@ SVClassifyStream.prototype.write = function(svinfo) {
        * checking requirements
        **/
       required_keys.forEach(function(key) {
-        if (!svinfo[key]) {
+        if (svinfo[key] == undefined) {
           throw new Error(key + ' is required for SV info.');
         }
       });
