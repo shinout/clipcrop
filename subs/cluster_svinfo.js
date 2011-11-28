@@ -58,7 +58,21 @@ function cluster_svinfo(input, config) {
      **/
     var current = JSON.parse(line.split('\t')[1]);
 
-    var key = [current.type, current.rname, current.rname2].join('_');
+    /**
+     * get the key of the cluster from current sv info
+     **/
+    var keys = [current.type, current.rname, current.rname2];
+
+    /**
+     * considering translocation type
+     **/
+    if (current.others.typenum) {
+      keys.push(current.others.typenum);
+    }
+
+    var key = keys.join('_');
+
+
 
     /**
      * get value

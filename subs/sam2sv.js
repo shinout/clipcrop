@@ -34,7 +34,6 @@ function sam2sv(samfile) {
         rname2 : '=',
         others : {
           LR  : bp.LR,
-          code: bp.code,
           size: bp.size
         }
       });
@@ -51,7 +50,6 @@ function sam2sv(samfile) {
      *
      * if original LR equals L, and not reversed,
      * or original LR equals R, and reversed,
-     * then 
      **/
 
     var start = Number(aln.pos) -1;
@@ -62,20 +60,73 @@ function sam2sv(samfile) {
      * if rname is different, assumes InterChromosomal Translocation
      **/
     if (f.code != bp.code) {
-      // this flagment belongs to rname (not bp.rname)
+
+      /**
+       * < the definition of translocation patterns >
+       * 
+       * Let's think of two chromosomes, A and C
+       *
+       * <chromosome A>
+       * AAAAAAAAAAAA|AAAAAA (+ strand)
+       * aaaaaaaaaaaa|aaaaaa (- strand)
+       *
+       * <chromosome A>
+       * CCCCCCCCCCCC|CCCCCC (+ strand)
+       * cccccccccccc|cccccc (- strand)
+       *
+       * <translocation type 1>
+       * AAAAAAAAAAAA|CCCCCC
+       * aaaaaaaaaaaa|cccccc
+       *
+       * <translocation type 2>
+       * AAAAAAAAAAAA|cccccccccccccc
+       * aaaaaaaaaaaa|CCCCCCCCCCCCCC
+       *
+       * <translocation type 3>
+       * CCCCCCCCCCCC|AAAAAA
+       * cccccccccccc|aaaaaa
+       *
+       * <translocation type 4>
+       * ccccc|AAAAAA
+       * CCCCC|aaaaaa
+       *
+       **/
+
+      /**
+       * get the second breakpoint
+       **/
+      var bp2 = {
+        code  : f.code,
+        rname : f.rname,
+        start : theOtherBPStart,
+        LR    : (bp.LR == 'R' ^ rev) ? 'L' : 'R'
+      };
+
+      /**
+       * name the smaller breakpoint as bpA, and the other, bpB
+       **/
+      var BPIsLargerThanBP2 = (bp.code > bp2.code);
+      var bpA = (BPIsLargerThanBP2) ? bp2 : bp;
+      var bpB = (BPIsLargerThanBP2) ? bp  : bp2;
+
+      /**
+       * get the type of translocation
+       **/
+      var typenum = (bpA.LR == 'R') ? 1: 3;
+      if (rev) typenum++;
+
       printSVInfo({
-        rname  : bp.rname,
-        start  : bp.start,
-        end    : bp.start + 1,
+        rname  : bpA.rname,
+        start  : bpA.start,
+        end    : bpA.start + 1,
         type   : 'CTX',
         len    : "*",
-        rname2 : f.rname,
-        start2 : theOtherBPStart,
+        rname2 : bpB.rname,
+        start2 : bpB.start,
         others : {
-          LR    : bp.LR,
-          code  : bp.code,
-          code2 : f.code,
-          size  : bp.size
+          LR      : (bpA.code == bp.code) ? 'L' : 'R',  // for balancing
+          typenum : typenum,
+          size    : bp.size
         }
       });
       return;
@@ -118,7 +169,6 @@ function sam2sv(samfile) {
       rname2 : '=',
       others : {
         LR   : bp.LR,
-        code : bp.code,
         size : bp.size
       }
     });
