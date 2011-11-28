@@ -112,20 +112,20 @@ function sam2sv(samfile) {
       /**
        * get the type of translocation
        **/
-      var typenum = (bpA.LR == 'R') ? 1: 3;
-      if (rev) typenum++;
+      var subtype = (bpA.LR == 'R') ? 1: 3;
+      if (rev) subtype++;
 
       printSVInfo({
-        rname  : bpA.rname,
-        start  : bpA.start,
-        end    : bpA.start + 1,
-        type   : 'CTX',
-        len    : "*",
-        rname2 : bpB.rname,
-        start2 : bpB.start,
-        others : {
+        rname   : bpA.rname,
+        start   : bpA.start,
+        end     : bpA.start + 1,
+        type    : 'CTX',
+        subtype : subtype,
+        len     : "*",
+        rname2  : bpB.rname,
+        start2  : bpB.start,
+        others  : {
           LR      : (bpA.code == bp.code) ? 'L' : 'R',  // for balancing
-          typenum : typenum,
           size    : bp.size
         }
       });

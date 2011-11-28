@@ -63,11 +63,8 @@ function cluster_svinfo(input, config) {
      **/
     var keys = [current.type, current.rname, current.rname2];
 
-    /**
-     * considering translocation type
-     **/
-    if (current.others.typenum) {
-      keys.push(current.others.typenum);
+    if (current.subtype) {
+      keys.push(current.subtype);
     }
 
     var key = keys.join('_');
@@ -139,29 +136,31 @@ function printSVInfo(svcStream, cl, minsize) {
   var Ls    = cl.filter(function(v) { return v.others.LR == "R" }).length;
   var Rs    = num - Ls;
 
-  var type  = cl[0].type;
-  var start = cl.get("start");
-  var start2 = cl.get("start2");
-  var len = (type == "INS") ? 1: cl.get("len");
+  var type    = cl[0].type;
+  var subtype = cl[0].subtype || null;
+  var start   = cl.get("start");
+  var start2  = cl.get("start2");
+  var len     = (type == "INS") ? 1: cl.get("len");
   if (isNaN(len)) {
     len = 1;
   }
-  var len_disp = (type == "INS") ? "*": len;
+  var len_disp = (type == "INS" || type == 'CTX') ? "*": len;
   // var size = cl.get("bpsize");
   // var score = getReliabilityScore(Ls,Rs,size);
   var score = getReliabilityScore(Ls,Rs);
 
   var svinfo = {
-    rname  : rname,
-    start  : start,        // 0-based coordinate system
-    end    : start + len,  // 0-based coordinate system
-    type   : type,
-    len    : len_disp,
-    rname2 : rname2,
-    start2 : start2,
-    score  : score,
-    caller : 'clipcrop',
-    others: {
+    rname   : rname,
+    start   : start,        // 0-based coordinate system
+    end     : start + len,  // 0-based coordinate system
+    type    : type,
+    subtype : subtype,
+    len     : len_disp,
+    rname2  : rname2,
+    start2  : start2,
+    score   : score,
+    caller  : 'clipcrop',
+    others  : {
       num: num,
       LR : [Ls,Rs].join('/')
     }
