@@ -25,7 +25,7 @@ For users who are used to Node.js, just
     $ npm install clipcrop
 
 
-Of course, in the field of bioinformatics, Node.js is still not major script, 
+Of course, in the field of bioinformatics, Node.js is still not a major scripting language, 
 
 You should install Node.js by its version manager called [nvm](https://github.com/creationix/nvm).
 
@@ -63,7 +63,13 @@ usage
 <td>reference genome used for mapping</td></tr>
 
 <tr><th>fasta information json file (optional)</th>
-<td>reference genome used for mapping</td></tr>
+<td>
+JSON file for [FASTAReader](https://github.com/shinout/FASTAReader).
+
+This file optional, and is used for faster reading of reference genomes.
+
+See [README of FASTAReader](https://github.com/shinout/FASTAReader/blob/master/README.md) for more detail.
+</td></tr>
 </table>
 
 
@@ -73,28 +79,28 @@ usage
 <tr><th>dir</th>
 <td>directory to put result files. default = basename(path)</td></tr>
 
-<tr><th>bp\_filter\_parallel</th>
+<tr><th>bp_filter_parallel</th>
 <td>the number of processes to use to filter breakpoints. default: 8</td></tr>
 
-<tr><th>max\_diff</th>
+<tr><th>max_diff</th>
 <td>max difference within breakpoint cluster values. default: 2</td>
 </tr>
-<tr><th>min\_cluster\_size</th>
+<tr><th>min_cluster_size</th>
 <td>minimum cluster size to be a valid breakpoint. default: 10</td> </tr>
 
-<tr><th>min\_quality</th>
+<tr><th>min_quality</th>
 <td>minimum base quality score to allow, default: 5</td> </tr>
 
-<tr><th>bases\_around\_break</th>
+<tr><th>bases_around_break</th>
 <td>number of extended bases around breakpoint to be mapped by clipped sequences. default: 1000</td> </tr>
 
-<tr><th>sv\_max\_diff</th>
+<tr><th>sv_max_diff</th>
 <td>max difference within breakpoint cluster values. default: 10</td> </tr>
 
-<tr><th>sv\_min\_cluster\_size</th>
+<tr><th>sv_min_cluster_size</th>
 <td>minimum cluster size to be a valid SV. default: 10</td> </tr>
 
-<tr><th>bwa\_threads</th>
+<tr><th>bwa_threads</th>
 <td>the number of threads bwa uses. default: 8</td> </tr>
 
 </table>
@@ -106,7 +112,7 @@ results
 results are formatted as BED format.
 
     #rname  start end type  subtype len score rname2  start2  caller  other
-    chr1  224199455 224199456 INS \* \* 38  = \* clipcrop  num:158 LR:49/109
+    chr1  224199455 224199456 INS * * 38  = * clipcrop  num:158 LR:49/109
 
 <table>
 <tr><th>rname</th>
