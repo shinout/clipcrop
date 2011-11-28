@@ -19,7 +19,7 @@ function cluster_svinfo(input, config) {
 
 
   var RF_FASTA = config.RF_FASTA;
-  var RF_JSON  = require(config.RF_JSON);
+  var RF_JSON  = (config.RF_JSON) ? require(config.RF_JSON) : null;
 
   var MAX_DIFF = config.MAX_DIFF || 3;
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 10;
