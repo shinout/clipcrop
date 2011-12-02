@@ -1,3 +1,6 @@
+<img src="https://github.com/shinout/clipcrop/raw/master/ClipCrop.png" />
+=========================================================================
+
 ClipCrop
 =========
 
