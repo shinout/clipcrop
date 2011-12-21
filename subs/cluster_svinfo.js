@@ -4,7 +4,7 @@ var LineStream = require("linestream");
 var dna = require("dna");
 var BPInfo = require(dirs.FORMATS + "bpinfo");
 var SVClassifyStream = require(dirs.SV_CLASSIFY + 'SVClassifyStream');
-var FASTAReader = require('fastareader');
+// var FASTAReader = require('fastareader');
 
 
 /**
@@ -18,14 +18,14 @@ function cluster_svinfo(input, config) {
   var self = this;
 
 
-  var RF_FASTA = config.RF_FASTA;
-  var RF_JSON  = (config.RF_JSON) ? require(config.RF_JSON) : null;
+  // var RF_FASTA = config.RF_FASTA;
+  // var RF_JSON  = (config.RF_JSON) ? require(config.RF_JSON) : null;
+  // self.freader = new FASTAReader(RF_FASTA, RF_JSON);
 
   var MAX_DIFF = config.MAX_DIFF || 3;
   var MIN_CLUSTER_SIZE = config.MIN_CLUSTER_SIZE || 10;
   var SAVE_DIR = config.SAVE_DIR || (__dirname + '../');
 
-  self.freader = new FASTAReader(RF_FASTA, RF_JSON);
 
   var svcStream = new SVClassifyStream(SAVE_DIR, {prefix: ''});
 

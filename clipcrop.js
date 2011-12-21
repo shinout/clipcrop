@@ -9,6 +9,8 @@ var AP = require("argparser");
 var path = require("path");
 var dirs = require('./config').dirs;
 
+const MAPPERS = ['shrimp', 'bwa'];
+
 var optionNames = {
   "bp_filter_parallel"  : 'the number of processes to use to filter breakpoints. default: 8',
   "max_diff"            : 'max difference within breakpoint cluster values. default: 2',
@@ -17,7 +19,8 @@ var optionNames = {
   "bases_around_break"  : 'number of extended bases around breakpoint to be mapped by clipped sequences. default: 1000',
   'sv_max_diff'         : 'max difference within breakpoint cluster values. default: 10',
   'sv_min_cluster_size' : 'minimum cluster size to be a valid SV. default: 10',
-  'bwa_threads'         : 'the number of threads bwa uses. default: 8'
+  'mapper'              : 'mapper : one of ' + MAPPERS.toString(),
+  'mapper_threads'      : 'the number of threads the mapping tool uses. default: 8'
 };
 
 /**
@@ -68,7 +71,7 @@ function main() {
 
   Object.keys(optionNames).forEach(function(name) {
     var val = p.getOptions(name);
-    if (val !== false && val !== undefined) config[name.toUpperCase()] = Number(val);
+    if (val !== false && val !== undefined) config[name.toUpperCase()] = val;
   });
 
   clipcrop(config);
@@ -101,7 +104,7 @@ function clipcrop(config, callback) {
     SV_MAX_DIFF         : 10,
     SV_MIN_CLUSTER_SIZE : 10,
 
-    BWA_THREADS         : 8
+    MAPPER_THREADS      : 8
   };
 
   config.__proto__ = defaultConfig;
@@ -120,42 +123,82 @@ function clipcrop(config, callback) {
      **/
     BREAKPOINT_BED   : path.normalize(config.OUTPUT_DIR + "/bp.bed"),
     BREAKPOINT_FASTQ : path.normalize(config.OUTPUT_DIR + "/bp.fastq"),
-    BREAKPOINT_FASTA : path.normalize(config.OUTPUT_DIR + "/bp.fasta"),
+    BREAKPOINT_FASTA : path.normalize(config.OUTPUT_DIR + "/bp.fa"),
     MAPPED_SAI       : path.normalize(config.OUTPUT_DIR + "/mapped.sai"),
     MAPPED_SAM       : path.normalize(config.OUTPUT_DIR + "/mapped.sam")
   };
 
 
   var $j = new Junjo({
-    destroy: true,
-    noTimeout: true,
-    silent: true
+    destroy   : true,
+    noTimeout : true,
+    silent    : true
   });
 
   /**
-   * check input files, environments
-   *
-   * file existence
-   * bwa
-   * sort
-   *
+   * checking file existence
    **/
   $j('check', function() {
     var ret = ["REFERENCE_FASTA","SAM"].every(function(name) {
       return fs.statSync(config[name]).isFile();
     });
+
     if (!ret || (config.REFERENCE_JSON && !fs.statSync(config.REFERENCE_JSON).isFile())) {
       throw new Error("file not found.");
     }
+  });
 
-    exec('which bwa', this.callbacks());
-    // exec('which sort', this.callbacks());
+
+  /**
+   * checking SHRiMP
+   **/
+  $j('checkSHRiMP', function() {
+    var shrimpDir = process.env['SHRIMP_FOLDER'];
+    if (!shrimpDir || !fs.statSync(shrimpDir).isDirectory()) {
+      return false;
+    }
+
+    shrimpDir = path.normalize(shrimpDir);
+
+    // valid shrimp directory ?
+    var pyscript = shrimpDir + '/utils/project-db.py';
+    if (!fs.statSync(pyscript).isFile()) {
+      return false;
+    }
+
+    var shrimpBin = shrimpDir + "/bin/gmapper-ls";
+    if (!fs.statSync(pyscript).isFile()) {
+      return false;
+    }
+    return true;
+  });
+
+
+  /**
+   * checking bwa
+   **/
+  $j('checkBWA', function() {
+    exec('which bwa', this.cb);
   })
   .post(function(e, out, err) {
-    if (e || err) {
-      throw new Error("bwa is required.");
-    }
+    return !e && !err;
   });
+
+
+  /**
+   * select mapper
+   **/
+  $j('mapper', function(shrimp, bwa) {
+    if (!shrimp && !bwa) {
+      throw new Error('no external mapper available. You must install SHRiMP2 or bwa >=v0.5');
+    }
+    if (typeof config.MAPPER == 'string') {
+      config.MAPPER = config.MAPPER.toLowerCase();
+    }
+    config.MAPPER = (MAPPERS.indexOf(config.MAPPER) >=0) ? config.MAPPER : (shrimp) ? 'shrimp' : 'bwa';
+
+  })
+  .after('checkSHRiMP', 'checkBWA');
 
 
   /**
@@ -176,10 +219,11 @@ function clipcrop(config, callback) {
     console.error('# BASES AROUND BREAK  : ' + cl.green(config.BASES_AROUND_BREAK));
     console.error('# MAX SV DIFF         : ' + cl.green(config.SV_MAX_DIFF));
     console.error('# MIN SV CLUSTER SIZE : ' + cl.green(config.SV_MIN_CLUSTER_SIZE));
-    console.error('# BWA THREADS         : ' + cl.green(config.BWA_THREADS));
+    console.error('# MAPPER              : ' + cl.green(config.MAPPER));
+    console.error('# MAPPER THREADS      : ' + cl.green(config.MAPPER_THREADS));
     console.error('#############################');
   })
-  .after("check");
+  .after("check", "mapper");
 
   /**
    * get raw breakpoints
@@ -194,7 +238,7 @@ function clipcrop(config, callback) {
 
     return rawbreaks;
   })
-  .after("check");
+  .after("showinfo");
 
 
   /**
@@ -311,55 +355,35 @@ function clipcrop(config, callback) {
   })
   .after("bpbed");
 
-  /**
-   * bwa index
-   **/
-  $j("bwa_index", function() {
-    var cmd = ["bwa index",
-      filenames.BREAKPOINT_FASTA
-    ].join(" ");
-
-    console.egreen(cmd);
-    exec(cmd, this.cb);
-  })
-  .eshift()
-  .after("bpfastagen");
-
 
   /**
-   * bwa aln
+   * mapping
+   * FASTA + FASTQ -> SAM
    **/
-  $j("bwa_aln", function() {
-    var cmd = ["bwa aln", 
-      "-t", config.BWA_THREADS,
-      filenames.BREAKPOINT_FASTA,
-      filenames.BREAKPOINT_FASTQ,
-      ">" + filenames.MAPPED_SAI
-    ].join(" ");
+  $j("mapping", function() {
+    switch (config.MAPPER) {
+      case 'bwa':
+        require(dirs.SUBROUTINES + 'mapping_bwa').exec(
+          filenames.BREAKPOINT_FASTA, // 1 fasta
+          filenames.BREAKPOINT_FASTQ, // 2 fastq
+          filenames.MAPPED_SAI,       // 3 sai (name)
+          filenames.MAPPED_SAM,       // 4 sam (name)
+          config.MAPPER_THREADS       // 5 cpus
+        , this.cb);
+        return;
 
-    console.egreen(cmd);
-    exec(cmd, this.cb);
+      case 'shrimp':
+        require(dirs.SUBROUTINES + 'mapping_shrimp').exec(
+          filenames.BREAKPOINT_FASTA, // 1 fasta
+          filenames.BREAKPOINT_FASTQ, // 2 fastq
+          filenames.MAPPED_SAM,       // 3 sam (name)
+          config.MAPPER_THREADS       // 4 cpus
+        , this.cb);
+        return;
+    }
   })
-  .eshift()
-  .after("bwa_index");
+  .after('bpfastq', 'bpfastagen');
 
-
-  /**
-   * bwa samse
-   **/
-  $j("bwa_samse", function() {
-    var cmd = ["bwa samse",
-      "-f", filenames.MAPPED_SAM,
-      filenames.BREAKPOINT_FASTA,
-      filenames.MAPPED_SAI,
-      filenames.BREAKPOINT_FASTQ
-    ].join(" ");
-
-    console.egreen(cmd);
-    exec(cmd, this.cb);
-  })
-  .eshift()
-  .after("bwa_aln");
 
 
   /**
@@ -380,7 +404,7 @@ function clipcrop(config, callback) {
     return sam2sv;
   })
   .eshift()
-  .after("bwa_samse");
+  .after("mapping");
 
 
   /**
