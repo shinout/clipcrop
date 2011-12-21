@@ -134,16 +134,23 @@ function clipcrop(config, callback) {
     silent    : true
   });
 
+
   /**
    * checking file existence
    **/
   $j('check', function() {
     var ret = ["REFERENCE_FASTA","SAM"].every(function(name) {
-      return fs.statSync(config[name]).isFile();
+      if (!fs.statSync(config[name]).isFile()) {
+        throw new Error(config[name] + ' is not found (' + name + ')');
+      }
     });
 
-    if (!ret || (config.REFERENCE_JSON && !fs.statSync(config.REFERENCE_JSON).isFile())) {
-      throw new Error("file not found.");
+    if (!fs.statSync(config.OUTPUT_DIR).isDirectory()) {
+      throw new Error('output dir ' + config.OUTPUT_DIR + ' is not found.');
+    }
+
+    if (config.REFERENCE_JSON && !fs.statSync(config.REFERENCE_JSON).isFile()) {
+      throw new Error("json file not found.");
     }
   });
 
