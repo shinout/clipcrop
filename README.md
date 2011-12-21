@@ -15,9 +15,10 @@ installation
 
 ### dependencies ###
 
-ClipCrop uses [bwa](http://bio-bwa.sourceforge.net/) internally.
+ClipCrop uses [SHRiMP2](http://compbio.cs.toronto.edu/shrimp/) or [bwa](http://bio-bwa.sourceforge.net/) internally.
 
-First *you have to install bwa* and add the binary to PATH env.
+First *you have to install SHRiMP2 or bwa (>=v0.5)* and add the binary to PATH env.
+If you use SHRiMP2, "export SHRIMP\_FOLDER=/path/to/SHRiMP2" to your env.
 
 
 ### install ClipCrop ###
