@@ -124,7 +124,6 @@ function clipcrop(config, callback) {
     BREAKPOINT_BED   : path.normalize(config.OUTPUT_DIR + "/bp.bed"),
     BREAKPOINT_FASTQ : path.normalize(config.OUTPUT_DIR + "/bp.fastq"),
     BREAKPOINT_FASTA : path.normalize(config.OUTPUT_DIR + "/bp.fa"),
-    MAPPED_SAI       : path.normalize(config.OUTPUT_DIR + "/mapped.sai"),
     MAPPED_SAM       : path.normalize(config.OUTPUT_DIR + "/mapped.sam")
   };
 
@@ -196,6 +195,10 @@ function clipcrop(config, callback) {
       config.MAPPER = config.MAPPER.toLowerCase();
     }
     config.MAPPER = (MAPPERS.indexOf(config.MAPPER) >=0) ? config.MAPPER : (shrimp) ? 'shrimp' : 'bwa';
+
+    if (config.MAPPER == 'shrimp' && !shrimp) {
+      throw new Error('you must install SHRiMP2 and export $SHRIMP_FOLDER.');
+    }
 
   })
   .after('checkSHRiMP', 'checkBWA');
@@ -366,7 +369,7 @@ function clipcrop(config, callback) {
         require(dirs.SUBROUTINES + 'mapping_bwa').exec(
           filenames.BREAKPOINT_FASTA, // 1 fasta
           filenames.BREAKPOINT_FASTQ, // 2 fastq
-          filenames.MAPPED_SAI,       // 3 sai (name)
+          config.OUTPUT_DIR,          // 3 SAVE_DIR
           filenames.MAPPED_SAM,       // 4 sam (name)
           config.MAPPER_THREADS       // 5 cpus
         , this.cb);
@@ -376,8 +379,9 @@ function clipcrop(config, callback) {
         require(dirs.SUBROUTINES + 'mapping_shrimp').exec(
           filenames.BREAKPOINT_FASTA, // 1 fasta
           filenames.BREAKPOINT_FASTQ, // 2 fastq
-          filenames.MAPPED_SAM,       // 3 sam (name)
-          config.MAPPER_THREADS       // 4 cpus
+          config.OUTPUT_DIR,          // 3 SAVE_DIR
+          filenames.MAPPED_SAM,       // 4 sam (name)
+          config.MAPPER_THREADS       // 5 cpus
         , this.cb);
         return;
     }

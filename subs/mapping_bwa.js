@@ -8,7 +8,7 @@ var $j = new Junjo({
   destroy  : true
 });
 
-$j.inputs(['fasta', 'fastq', 'sai', 'sam', 'cpus']);
+$j.inputs(['fasta', 'fastq', 'dir', 'sam', 'cpus']);
 
 
 /**
@@ -27,26 +27,26 @@ $j("bwa_index", function(fasta) {
 /**
  * bwa aln
  **/
-$j("bwa_aln", function(fasta, fastq, sai, cpus) {
-  var cmd = ["bwa aln", "-t", cpus, fasta, fastq, ">" + sai ].join(" ");
+$j("bwa_aln", function(fasta, fastq, dir, cpus) {
+  var cmd = ["bwa aln", "-t", cpus, fasta, fastq, ">" + dir + '/mapped.sai'].join(" ");
 
   console.egreen(cmd);
   exec(cmd, this.cb);
 })
-.using('fasta','fastq', 'sai', 'cpus', 'bwa_index')
+.using('fasta','fastq', 'dir', 'cpus', 'bwa_index')
 .eshift();
 
 
 /**
  * bwa samse
  **/
-$j("bwa_samse", function(fasta, fastq, sai, sam) {
-  var cmd = ["bwa samse", "-f", sam, fasta, sai, fastq ].join(" ");
+$j("bwa_samse", function(fasta, fastq, dir, sam) {
+  var cmd = ["bwa samse", "-f", sam, fasta, dir + '/mapped.sai', fastq ].join(" ");
 
   console.egreen(cmd);
   exec(cmd, this.cb);
 })
 .eshift()
-.using('fasta', 'fastq', 'sai', 'sam', "bwa_aln");
+.using('fasta', 'fastq', 'dir', 'sam', "bwa_aln");
 
 module.exports = $j;

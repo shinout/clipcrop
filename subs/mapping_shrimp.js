@@ -7,7 +7,7 @@ var $j = new Junjo({
   destroy  : true
 });
 
-$j.inputs(['fasta', 'fastq', 'sam', 'cpus']);
+$j.inputs(['fasta', 'fastq', 'dir', 'sam', 'cpus']);
 
 
 /**
@@ -16,6 +16,7 @@ $j.inputs(['fasta', 'fastq', 'sam', 'cpus']);
 $j("project_db", function(fasta) {
   var shrimpDir = process.env['SHRIMP_FOLDER'];
   var pyscript = shrimpDir + '/utils/project-db.py';
+
   var cmd = ["python", pyscript, '--shrimp-mode', 'ls', fasta].join(" ");
 
   console.egreen(cmd);
@@ -26,17 +27,34 @@ $j("project_db", function(fasta) {
 
 
 /**
+ * mv
+ **/
+$j("mv", function(fasta, dir) {
+  var name = require('path').basename(fasta, '.fa');
+  var cmd = ["mv", name + '-ls.*', dir].join(' ');
+
+  console.egreen(cmd);
+  exec(cmd, this.cb);
+})
+.using('fasta', 'dir', 'project_db')
+.eshift();
+
+
+/**
  * mapping
  **/
-$j("mapping", function(fastq, sam, cpus) {
+$j("mapping", function(fasta, fastq, dir, sam, cpus) {
+  var name = require('path').basename(fasta, '.fa');
+
   var shrimpDir = process.env['SHRIMP_FOLDER'];
   var shrimpBin = shrimpDir + "/bin/gmapper-ls";
   var cmd = [shrimpBin,
     fastq,
-    '-L bp-ls',
+    '-L', dir + '/' + name + '-ls',
     '--qv-offset 33',
     '-Q',
     '-E',
+    '-o', 5,
     '-N', cpus,
     '>', sam
   ].join(" ");
@@ -44,7 +62,7 @@ $j("mapping", function(fastq, sam, cpus) {
   console.egreen(cmd);
   exec(cmd, this.cb);
 })
-.using('fastq', 'sam', 'cpus', 'project_db')
+.using('fasta', 'fastq', 'dir', 'sam', 'cpus', 'mv')
 .eshift();
 
 
