@@ -527,12 +527,16 @@ function to_stderr(rStream, $jn) {
 }
 
 
+clipcrop.paths = {};
 
 /**
  * exporting subroutines
  **/
 fs.readdirSync(dirs.SUBROUTINES).forEach(function(file) {
-  clipcrop[file.slice(0, -3)] = require(dirs.SUBROUTINES + file);
+  var name = file.slice(0, -3); 
+  var path = dirs.SUBROUTINES + file;
+  clipcrop.paths[name] = path;
+  clipcrop[name] = require(path);
 });
 
 
@@ -540,12 +544,16 @@ fs.readdirSync(dirs.SUBROUTINES).forEach(function(file) {
  * exporting format info
  **/
 fs.readdirSync(dirs.FORMATS).forEach(function(file) {
-  clipcrop[file.slice(0, -3)] = require(dirs.FORMATS + file);
+  var name = file.slice(0, -3); 
+  var path = dirs.FORMATS + file;
+  clipcrop.paths[name] = path;
+  clipcrop[name] = require(path);
 });
 
 /**
  * exporting SVClassifyStream
  **/
+clipcrop.paths.SVClassifyStream = dirs.SV_CLASSIFY + 'SVClassifyStream';
 clipcrop.SVClassifyStream = require(dirs.SV_CLASSIFY + 'SVClassifyStream');
 
 module.exports = clipcrop;
