@@ -29,7 +29,7 @@ var BPInfo = {
     this.numbers.forEach(function(col) {
       ret[col] = Number(ret[col]);
     });
-    ret.code = toCode(ret.rname);
+    ret.code = toCode(ret.rname, true);
 
     return ret;
   },

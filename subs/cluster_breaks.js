@@ -87,7 +87,7 @@ function cluster_breaks(input, config) {
      **/
     var current = {
       rname  : ar[0],
-      code   : dna.getChromCode(ar[0]),
+      code   : dna.getChromCode(ar[0], true),
       start  : ar[1],
       LR     : ar[3],
       cigar  : ar[4],

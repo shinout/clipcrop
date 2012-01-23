@@ -10,7 +10,7 @@
   "bin": "./clipcrop.js",
   "dependencies": {
     "termcolor": ">=0.1.3",
-    "dna": ">=0.0.5",
+    "dna": ">=0.1.2",
     "fastareader": ">=0.1.1",
     "linestream": ">=0.2.6",
     "arraystream": ">=0.0.3",
