@@ -88,13 +88,13 @@ function callRawBreaksImpl(line, result, d) {
     if (type == 'L') {
       var bp = ali.cigar.getLBreak(ali.pos);
       var seq = ali.seq.slice(0, len);
-      if (data.noN && seq.match(/^[N]+$/)) return; // filter NNNNN....
+      if (d.noN && seq.match(/^[N]+$/)) return; // filter NNNNN....
       var qual = ali.qual.slice(0, len);
     }
     else {
       var bp  = ali.cigar.getRBreak(ali.pos);
       var seq = ali.seq.substr(-len);
-      if (data.noN && seq.match(/^[N]+$/)) return; // filter NNNNN....
+      if (d.noN && seq.match(/^[N]+$/)) return; // filter NNNNN....
       var qual = ali.qual.substr(-len);
     }
 

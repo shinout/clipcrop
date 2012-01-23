@@ -97,6 +97,7 @@ function cluster_breaks(input, config) {
       name   : ar[8]
     };
 
+
     // quality filter
     if (getmeanq(current.qual) < MIN_QUALITY) return;
 
@@ -125,6 +126,15 @@ function cluster_breaks(input, config) {
   });
 
   lines.on("end", function() {
+    print(result.cluster.L,
+          MIN_CLUSTER_SIZE, // allowable minimum cluster size
+          MIN_SEQ_LENGTH    // allowable minimum sequence length (fastq only)
+    );
+
+    print(result.cluster.R,
+          MIN_CLUSTER_SIZE, // allowable minimum cluster size
+          MIN_SEQ_LENGTH    // allowable minimum sequence length (fastq only)
+    );
     // output.end(); // for applying Node >=v0.6.1
   });
 
@@ -181,6 +191,12 @@ function printBED(cl, minsize) {
  **/
 function printFASTQ(cl, minsize, minlen) {
   var num = cl.length;
+
+  var names = cl.reduce(function(ret, bp) {
+    return ret + bp.rname;
+  }, "");
+
+
   if (num < minsize) return;
 
   cl.forEach(function(bp) {
