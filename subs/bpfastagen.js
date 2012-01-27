@@ -77,8 +77,8 @@ function bpfastagen() {
 
   // sort (asc)
   .sort(function(v1, v2) {
-    var v1code = dna.getChromCode(v1.rname);
-    var v2code = dna.getChromCode(v2.rname);
+    var v1code = dna.getChromCode(v1.rname, true);
+    var v2code = dna.getChromCode(v2.rname, true);
     if (v1code == v2code) {
       return (v1.start> v2.start) ? 1 : -1;
     }
@@ -135,7 +135,10 @@ function bpfastagen() {
         }
       });
 
-      if (!bases) return;
+      if (!bases) {
+        console.error('reference name "' + v.rname + '" not found in ' + fastafile);
+        return;
+      }
 
       var fastaName = FASTAName.stringify(v);
 
