@@ -2,7 +2,7 @@
   "author": "SHIN Suzuki <shinout310@gmail.com>",
   "name": "clipcrop",
   "description": "a tool for detecting structural variations using soft-clipping information",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "main": "./clipcrop.js",
   "engines": {
     "node": ">=0.6.0"
