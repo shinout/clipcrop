@@ -34,6 +34,8 @@ function showUsage() {
   Object.keys(optionNames).forEach(function(opname) {
     console.error('\t--' + opname + '\t' + optionNames[opname]);
   });
+  console.error ('\t' + '--version|-v\tshow version info');
+  console.error ('\t' + '-V\tshow verbose version info');
 }
 
 
@@ -43,13 +45,17 @@ function showUsage() {
 function main() {
 
   var p = new AP()
-  .addOptions([
-  ])
+  .addOptions(['V', 'v', 'version'])
   .addValueOptions([
     'dir',
   ])
   .addValueOptions(Object.keys(optionNames))
   .parse();
+
+  if (p.getOptions("V", "v", "version")) {
+    showVersion(p.getOptions("V"));
+    return;
+  }
 
   var samfile = p.getArgs(0);
   var fastafile = p.getArgs(1);
@@ -524,6 +530,26 @@ function to_stderr(rStream, $jn) {
       $jn.$.errlogs.push(str);
     }
   });
+}
+
+
+/**
+ * display the version info
+ **/
+function showVersion(verbose) {
+  var pkgInfo = require(__dirname + "/package");
+
+  if (!verbose) {
+    console.log(pkgInfo.name, pkgInfo.version);
+    return;
+  }
+  console.log('=================================');
+  console.log("\t", cl.blue("C") + cl.cyan("lip //"));
+  console.log("\t", cl.cyan("    // ") + cl.purple("C") + cl.cyan("rop"), cl.green(pkgInfo.version));
+  console.log('=================================');
+  console.log(pkgInfo.name, "--", pkgInfo.description + "\n");
+  console.log("#", "author:\t", pkgInfo.author);
+  console.log("#", "see also:\t", "http://www.biomedcentral.com/1471-2105/12/S14/S7/");
 }
 
 
